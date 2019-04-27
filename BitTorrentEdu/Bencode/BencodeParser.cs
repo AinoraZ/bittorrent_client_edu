@@ -52,16 +52,10 @@ namespace Bencode
             return new BencodedString(tempChars.ToString());
         }
 
-        private int ParseIntegerUntilCharacter(ref byte[] bytes, ref int byteOffset, char character)
+        private BencodedInteger ParseIntegerBencode(ref byte[] bytes, ref int byteOffset)
         {
-            var tempChars = new List<char>();
-            char byteChar;
-            for (; (byteChar = ByteToChar(bytes[byteOffset])) != character; byteOffset++)
-            {
-                tempChars.Add(byteChar);
-            }
-            byteOffset++;
-            return int.Parse(tempChars.ToString());
+            var intValue = ParseIntegerUntilCharacter(ref bytes, ref byteOffset, 'e');
+            return new BencodedInteger(intValue);
         }
 
         private BencodedList ParseListBencode(ref byte[] bytes, ref int byteOffset)
@@ -103,7 +97,7 @@ namespace Bencode
         private char GetInitialByte(ref byte[] bytes, ref int byteOffset)
         {
             char initial = ByteToChar(bytes[byteOffset]);
-            byteOffset += 1;
+            byteOffset++;
 
             return initial;
         }
@@ -117,11 +111,16 @@ namespace Bencode
 
             throw new Exception("Unsuported type");
         }
-
-        private BencodedInteger ParseIntegerBencode(ref byte[] bytes, ref int byteOffset)
+        private int ParseIntegerUntilCharacter(ref byte[] bytes, ref int byteOffset, char character)
         {
-            var intValue = ParseIntegerUntilCharacter(ref bytes, ref byteOffset, 'e');
-            return new BencodedInteger(intValue);
+            var tempChars = new List<char>();
+            char byteChar;
+            for (; (byteChar = ByteToChar(bytes[byteOffset])) != character; byteOffset++)
+            {
+                tempChars.Add(byteChar);
+            }
+            byteOffset++;
+            return int.Parse(tempChars.ToString());
         }
 
         private char ByteToChar(byte value)
