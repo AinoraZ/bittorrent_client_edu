@@ -47,9 +47,9 @@ namespace Bencode
             {
                 tempChars.Add(ByteToChar(bytes[byteOffset]));
             }
-            byteOffset++;
 
-            return new BencodedString(tempChars.ToString());
+            var tempString = new string(tempChars.ToArray());
+            return new BencodedString(tempString);
         }
 
         private BencodedInteger ParseIntegerBencode(ref byte[] bytes, ref int byteOffset)
@@ -61,7 +61,7 @@ namespace Bencode
         private BencodedList ParseListBencode(ref byte[] bytes, ref int byteOffset)
         {
             var tempValue = new List<BencodedObject>();
-            for (; ByteToChar(bytes[byteOffset]) != 'e'; byteOffset++)
+            while (ByteToChar(bytes[byteOffset]) != 'e')
             {
                 var initial = GetInitialByte(ref bytes, ref byteOffset);
                 var parser = GetBencodeParser(initial);
@@ -78,8 +78,9 @@ namespace Bencode
         private BencodedDictionary ParseDictionaryBencode(ref byte[] bytes, ref int byteOffset)
         {
             var tempValue = new Dictionary<string, BencodedObject>();
-            for (; ByteToChar(bytes[byteOffset]) != 'e'; byteOffset++)
+            while(ByteToChar(bytes[byteOffset]) != 'e')
             {
+                byteOffset++; //Fake initial read, as we know it should be a string
                 var bencodedString = ParseStringBencode(ref bytes, ref byteOffset);
 
                 var initial = GetInitialByte(ref bytes, ref byteOffset);
@@ -111,7 +112,7 @@ namespace Bencode
 
             throw new Exception("Unsuported type");
         }
-        private int ParseIntegerUntilCharacter(ref byte[] bytes, ref int byteOffset, char character)
+        private long ParseIntegerUntilCharacter(ref byte[] bytes, ref int byteOffset, char character)
         {
             var tempChars = new List<char>();
             char byteChar;
@@ -120,7 +121,9 @@ namespace Bencode
                 tempChars.Add(byteChar);
             }
             byteOffset++;
-            return int.Parse(tempChars.ToString());
+
+            var tempString = new string(tempChars.ToArray());
+            return long.Parse(tempString);
         }
 
         private char ByteToChar(byte value)

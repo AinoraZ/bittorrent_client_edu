@@ -44,6 +44,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DTOs\Peer.cs" />
+    <Compile Include="DTOs\Torrent.cs" />
+    <Compile Include="DTOs\TorrentInfoSingle.cs" />
     <Compile Include="DTOs\TrackerResponse.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -56,6 +58,10 @@
     <ProjectReference Include="..\Sockets\Sockets.csproj">
       <Project>{9D4D2C77-936C-41F5-94AF-A790E19A3A35}</Project>
       <Name>Sockets</Name>
+    </ProjectReference>
+    <ProjectReference Include="Bencode\Bencode.csproj">
+      <Project>{2DBE606B-B0E1-4BBE-BCE6-FE0C9382462C}</Project>
+      <Name>Bencode</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

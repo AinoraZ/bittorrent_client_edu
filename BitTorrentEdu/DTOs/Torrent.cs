@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Bencode.DTOs
+namespace BitTorrentEdu.DTOs
 {
     public class Torrent
     {

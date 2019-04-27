@@ -1,10 +1,10 @@
 ﻿namespace Bencode.DTOs
 {
-    public class BencodeInteger : BencodedObject
+    public class BencodedInteger : BencodedObject
     {
-        public int Value { get; private set; }
+        public long Value { get; private set; }
 
-        public BencodeInteger(int value) : base(BencodedType.Integer)
+        public BencodedInteger(long value) : base(BencodedType.Integer)
         {
             Value = value;
         }
