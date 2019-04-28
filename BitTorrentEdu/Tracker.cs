@@ -36,7 +36,7 @@ namespace BitTorrentEdu
         //http://bttracker.debian.org:6969/announce
         public void Track(Torrent torrent, TrackerEvent trackerEvent, bool compact = false)
         {
-            var hostUrl = torrent.AnounceUrl;
+            var hostUrl = torrent.AnnounceUrl;
         }
 
         public string FormatTrackerRequestData(string infoHash, int uploaded, int downloaded, int left, TrackerEvent trackerEvent)

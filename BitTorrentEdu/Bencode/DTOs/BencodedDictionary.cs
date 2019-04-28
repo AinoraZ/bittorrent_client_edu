@@ -6,7 +6,7 @@ namespace Bencode.DTOs
     {
         public Dictionary<string, BencodedObject> Value { get; private set; }
 
-        public BencodedDictionary(Dictionary<string, BencodedObject> value) : base(BencodedType.Dictionary)
+        public BencodedDictionary(Dictionary<string, BencodedObject> value, string rawValue) : base(BencodedType.Dictionary, rawValue)
         {
             Value = value;
         }

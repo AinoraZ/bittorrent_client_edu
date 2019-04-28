@@ -38,8 +38,10 @@ namespace Bencode
 
         private BencodedString ParseStringBencode(ref byte[] bytes, ref int byteOffset)
         {
+            string rawValue = "";
             byteOffset--;
             var strLength = ParseIntegerUntilCharacter(ref bytes, ref byteOffset, ':');
+            rawValue += $"{strLength}:";
             var offsetLength = byteOffset + strLength;
 
             var tempChars = new List<char>();
@@ -49,17 +51,19 @@ namespace Bencode
             }
 
             var tempString = new string(tempChars.ToArray());
-            return new BencodedString(tempString);
+            rawValue += tempString;
+            return new BencodedString(tempString, rawValue);
         }
 
         private BencodedInteger ParseIntegerBencode(ref byte[] bytes, ref int byteOffset)
         {
             var intValue = ParseIntegerUntilCharacter(ref bytes, ref byteOffset, 'e');
-            return new BencodedInteger(intValue);
+            return new BencodedInteger(intValue, $"i{intValue}e");
         }
 
         private BencodedList ParseListBencode(ref byte[] bytes, ref int byteOffset)
         {
+            string rawValue = "l";
             var tempValue = new List<BencodedObject>();
             while (ByteToChar(bytes[byteOffset]) != 'e')
             {
@@ -67,32 +71,38 @@ namespace Bencode
                 var parser = GetBencodeParser(initial);
 
                 var bencodedObj = parser(ref bytes, ref byteOffset);
+                rawValue += bencodedObj.RawValue;
 
                 tempValue.Add(bencodedObj);
             }
             byteOffset++;
+            rawValue += "e";
 
-            return new BencodedList(tempValue);
+            return new BencodedList(tempValue, rawValue);
         }
 
         private BencodedDictionary ParseDictionaryBencode(ref byte[] bytes, ref int byteOffset)
         {
+            string rawValue = "d";
             var tempValue = new Dictionary<string, BencodedObject>();
             while(ByteToChar(bytes[byteOffset]) != 'e')
             {
                 byteOffset++; //Fake initial read, as we know it should be a string
                 var bencodedString = ParseStringBencode(ref bytes, ref byteOffset);
+                rawValue += bencodedString.RawValue;
 
                 var initial = GetInitialByte(ref bytes, ref byteOffset);
                 var parser = GetBencodeParser(initial);
 
                 var bencodedObj = parser(ref bytes, ref byteOffset);
+                rawValue += bencodedObj.RawValue;
 
                 tempValue.Add(bencodedString.Value, bencodedObj);
             }
             byteOffset++;
+            rawValue += "e";
 
-            return new BencodedDictionary(tempValue);
+            return new BencodedDictionary(tempValue, rawValue);
         }
 
         private char GetInitialByte(ref byte[] bytes, ref int byteOffset)
@@ -128,7 +138,7 @@ namespace Bencode
 
         private char ByteToChar(byte value)
         {
-            return Encoding.ASCII.GetString(new[] { value })[0];
+            return Encoding.GetEncoding(28591).GetString(new[] { value })[0];
         }
     }
 }

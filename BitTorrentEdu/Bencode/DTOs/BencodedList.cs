@@ -6,7 +6,7 @@ namespace Bencode.DTOs
     {
         public List<BencodedObject> Value { get; private set; }
 
-        public BencodedList(List<BencodedObject> value) : base(BencodedType.List)
+        public BencodedList(List<BencodedObject> value, string rawValue) : base(BencodedType.List, rawValue)
         {
             Value = value;
         }

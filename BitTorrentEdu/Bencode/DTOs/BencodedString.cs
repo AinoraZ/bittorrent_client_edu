@@ -4,7 +4,7 @@
     {
         public string Value { get; private set; }
 
-        public BencodedString(string value) : base(BencodedType.String)
+        public BencodedString(string value, string rawValue) : base(BencodedType.String, rawValue)
         {
             Value = value;
         }

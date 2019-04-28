@@ -4,7 +4,7 @@
     {
         public long Value { get; private set; }
 
-        public BencodedInteger(long value) : base(BencodedType.Integer)
+        public BencodedInteger(long value, string rawValue) : base(BencodedType.Integer, rawValue)
         {
             Value = value;
         }

@@ -11,10 +11,12 @@
     public class BencodedObject
     {
         public BencodedType Type { get; private set; }
+        public string RawValue { get; private set; }
 
-        protected BencodedObject(BencodedType type)
+        protected BencodedObject(BencodedType type, string rawValue)
         {
             Type = type;
+            RawValue = rawValue;
         }
     }
 }
