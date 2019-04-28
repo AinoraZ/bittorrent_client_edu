@@ -12,12 +12,14 @@ namespace Sockets
         public string Content { get; private set; }
         public string ErrorMessage { get; private set; }
         public HttpStatusCode StatusCode { get; private set; }
+        public byte[] ByteContent { get; private set; }
 
-        public ResponseWrapper(string content, HttpStatusCode statusCode)
+        public ResponseWrapper(string content, HttpStatusCode statusCode, byte[] byteContent)
         {
             StatusCode = statusCode;
             if (IsSuccessStatusCode())
             {
+                ByteContent = byteContent;
                 Content = content;
                 return;
             }

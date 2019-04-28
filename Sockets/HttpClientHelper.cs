@@ -13,7 +13,8 @@ namespace Sockets
                 var response = await client.SendAsync(request);
 
                 var responseMsg = await response.Content.ReadAsStringAsync();
-                return new ResponseWrapper(responseMsg, response.StatusCode);
+                var responseBytes = await response.Content.ReadAsByteArrayAsync();
+                return new ResponseWrapper(responseMsg, response.StatusCode, responseBytes);
             }
         }
     }

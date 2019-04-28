@@ -18,10 +18,20 @@ namespace Bencode
 
         public List<BencodedObject> ParseAllBencodeFromFile(string filePath)
         {
-            var returnValue = new List<BencodedObject>();
-
-            int byteOffset = 0;
             var bytes = File.ReadAllBytes(filePath);
+            return ParseAllBencodeFromBytes(ref bytes);
+        }
+
+        public List<BencodedObject> ParseAllBencodeFromString(string bencodedString)
+        {
+            var bytes = Encoding.GetEncoding(1252).GetBytes(bencodedString);
+            return ParseAllBencodeFromBytes(ref bytes);
+        }
+
+        public List<BencodedObject> ParseAllBencodeFromBytes(ref byte[] bytes)
+        {
+            var returnValue = new List<BencodedObject>();
+            int byteOffset = 0;
 
             while (byteOffset < bytes.Length)
             {
