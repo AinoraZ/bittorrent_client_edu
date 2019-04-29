@@ -6,6 +6,8 @@ namespace BitTorrentEdu.DTOs
 {
     public class SocketPeer
     {
+        //TODO: Implament an event to listen to when peer disconnects (will be consumed by PeerConnector)
+
         public Peer Peer { get; }
         public Socket Socket { get; }
         public byte[] InfoHash { get; }
