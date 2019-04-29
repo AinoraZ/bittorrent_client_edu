@@ -19,7 +19,7 @@ namespace BitTorrentEdu.DTOs
         public string WarningMessage { get; private set; }
         public long Interval { get; private set; }
         public long? MinInterval { get; private set; }
-        public string TrackerId { get; private set; }
+        public string TrackerId { get; set; }
         public long? CompleteCount { get; private set; }
         public long? IncompleteCount { get; private set; }
         public List<Peer> Peers { get; private set; }

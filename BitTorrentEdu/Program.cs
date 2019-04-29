@@ -1,5 +1,6 @@
 ﻿using Bencode;
 using Sockets;
+using System;
 
 namespace BitTorrentEdu
 {
@@ -16,7 +17,16 @@ namespace BitTorrentEdu
             var trackerResponseFactory = new TrackerResponseFactory(parser);
             var tracker = new Tracker(httpClient, parser, trackerResponseFactory, "-ZA0001-000000000001", 6881);
 
-            tracker.Track(torrent, TrackerEvent.Started).Wait();
+            var headTrackerResult = tracker.Track(torrent, TrackerEvent.Started).Result;
+
+            var tcpSocketHelper = new TcpSocketHelper();
+            var peerConnector = new PeerConnector(tcpSocketHelper);
+
+            foreach (var peer in headTrackerResult.Peers)
+            {
+                if (peerConnector.TryConnectToPeer(peer))
+                    Console.WriteLine($"Connected to peer {peer.Ip}:{peer.Port}");
+            }
         }
     }
 }

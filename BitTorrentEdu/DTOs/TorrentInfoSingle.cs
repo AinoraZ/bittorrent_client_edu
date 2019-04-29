@@ -6,8 +6,6 @@ namespace BitTorrentEdu.DTOs
 {
     public class TorrentInfoSingle
     {
-        public static readonly int PieceHashLength = 20;
-
         public TorrentInfoSingle(byte[] infoHash, long pieceLength, long length, string name = null, string md5Sum = null)
         {
             InfoHash = infoHash;

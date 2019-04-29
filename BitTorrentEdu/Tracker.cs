@@ -36,7 +36,7 @@ namespace BitTorrentEdu
             Port = port;
         }
 
-        public async Task Track(Torrent torrent, TrackerEvent trackerEvent, bool compact = false)
+        public async Task<TrackerResponse> Track(Torrent torrent, TrackerEvent trackerEvent, bool compact = false)
         {
             var hostUrl = torrent.AnnounceUrl;
             var encodedInfoHash = torrent.Info.GetUrlEncodedInfoHash();
@@ -46,12 +46,10 @@ namespace BitTorrentEdu
             var fullUrl = hostUrl + formattedTrackerRequestData;
             var responseWrapper = await HttpClient.Send(HttpMethod.Get, fullUrl);
             if (!responseWrapper.IsSuccessStatusCode())
-            {
                 throw new Exception("Request failed");
-            }
 
             var bytes = responseWrapper.ByteContent;
-            var trackerReponse = TrackerResponseFactory.GetTrackerResponse(ref bytes);
+            return TrackerResponseFactory.GetTrackerResponse(ref bytes);
         }
 
         private string FormatTrackerRequestData(string infoHash, long uploaded, long downloaded, long left, TrackerEvent trackerEvent, bool compact)

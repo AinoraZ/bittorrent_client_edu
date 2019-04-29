@@ -166,7 +166,7 @@ namespace BitTorrentEdu
             return ((BencodedString) bencodedPeerId).Value;
         }
 
-        private long GetPort(Dictionary<string, BencodedObject> bencodedPeerDict)
+        private int GetPort(Dictionary<string, BencodedObject> bencodedPeerDict)
         {
             if (!bencodedPeerDict.TryGetValue("port", out BencodedObject bencodedPort))
                 throw new Exception("Each peer must contain a Port");
@@ -174,7 +174,7 @@ namespace BitTorrentEdu
             if (bencodedPort.Type != BencodedType.Integer)
                 throw new Exception("Port must be an integer");
 
-            return ((BencodedInteger) bencodedPort).Value;
+            return (int) ((BencodedInteger) bencodedPort).Value;
         }
 
         private string GetIpAddress(Dictionary<string, BencodedObject> bencodedPeerDict)
