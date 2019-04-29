@@ -2,10 +2,7 @@
 using BitTorrentEdu.DTOs;
 using Sockets;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BitTorrentEdu
@@ -39,7 +36,6 @@ namespace BitTorrentEdu
             Port = port;
         }
 
-        //http://bttracker.debian.org:6969/announce
         public async Task Track(Torrent torrent, TrackerEvent trackerEvent, bool compact = false)
         {
             var hostUrl = torrent.AnnounceUrl;

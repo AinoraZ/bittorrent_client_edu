@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BitTorrentEdu
 {
@@ -56,6 +55,7 @@ namespace BitTorrentEdu
         {
             if (!bencodedTrackerResponse.TryGetValue("interval", out BencodedObject bencodedIntervalObj))
                 throw new Exception("Tracker response in bad format. Tracker did not contain an interval value");
+
             if (bencodedIntervalObj.Type != BencodedType.Integer)
                 throw new Exception("Tracker response in bad format. Tracker interval was a non integer value");
 
@@ -91,8 +91,8 @@ namespace BitTorrentEdu
 
             if (bencodedPeers.Type == BencodedType.List)
             {
-                var dictionaryPeers = ((BencodedList) bencodedPeers).Value;
-                return GetDictionaryPeers(dictionaryPeers);
+                var listPeers = ((BencodedList) bencodedPeers).Value;
+                return GetDictionaryPeers(listPeers);
             }
 
             if (bencodedPeers.Type == BencodedType.String)
@@ -118,9 +118,8 @@ namespace BitTorrentEdu
                 var port = GetPort(bencodedPeerDict);
                 var peerId = GetPeerIdIfAny(bencodedPeerDict);
 
-                if (TryParseIPv4String(ipStr, out byte[] byteAddress))
+                if (!TryParseIPv4String(ipStr, out byte[] byteAddress))
                     throw new Exception("Only IPv4 address are supported");
-
 
                 var ipAddress = new IPAddress(byteAddress);
                 var peer = new Peer(ipAddress, port, peerId);

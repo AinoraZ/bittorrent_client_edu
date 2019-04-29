@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net;
 
 namespace BitTorrentEdu.DTOs
 {
-   public class Peer
+    public class Peer
     {
         public Peer(IPAddress ip, long port, string id = null)
         {
