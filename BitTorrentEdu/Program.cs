@@ -17,7 +17,7 @@ namespace BitTorrentEdu
             var parser = new BencodeParser();
 
             var torrentFactory = new TorrentFactory(parser);
-            var torrent = torrentFactory.GetTorrentFromFile(@"G:\University\uzd2\debian-9.8.0-amd64-DVD-1.iso.torrent");
+            var torrent = torrentFactory.GetTorrentFromFile(@"G:\University\uzd2\03fd3cba845a8d252d9768806486f004d7f4e374.torrent");
 
             var httpClient = new HttpClientHelper();
             var trackerResponseFactory = new TrackerResponseFactory(parser);

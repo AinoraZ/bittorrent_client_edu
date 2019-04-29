@@ -89,9 +89,9 @@ namespace BitTorrentEdu
             if (!bencodedTrackerResponse.TryGetValue("peers", out BencodedObject bencodedPeers))
                 throw new Exception("Trackers without ipv4 peer lists are not suppported");
 
-            if (bencodedPeers.Type == BencodedType.Dictionary)
+            if (bencodedPeers.Type == BencodedType.List)
             {
-                var dictionaryPeers = ((BencodedDictionary)bencodedPeers).Value;
+                var dictionaryPeers = ((BencodedList) bencodedPeers).Value;
                 return GetDictionaryPeers(dictionaryPeers);
             }
 
@@ -104,9 +104,89 @@ namespace BitTorrentEdu
             throw new Exception("Tracker response in bad format. Peers must be in a dictionary or binary string model");
         }
 
-        private List<Peer> GetDictionaryPeers(Dictionary<string, BencodedObject> bencodedPeers)
+        private List<Peer> GetDictionaryPeers(List<BencodedObject> bencodedPeers)
         {
-            throw new NotImplementedException();
+            var resultPeers = new List<Peer>();
+
+            foreach (var bencodedPeer in bencodedPeers)
+            {
+                if (bencodedPeer.Type != BencodedType.Dictionary)
+                    throw new Exception("Each peer list item must be a dictionary");
+
+                var bencodedPeerDict = ((BencodedDictionary) bencodedPeer).Value;
+                var ipStr = GetIpAddress(bencodedPeerDict);
+                var port = GetPort(bencodedPeerDict);
+                var peerId = GetPeerIdIfAny(bencodedPeerDict);
+
+                if (TryParseIPv4String(ipStr, out byte[] byteAddress))
+                    throw new Exception("Only IPv4 address are supported");
+
+
+                var ipAddress = new IPAddress(byteAddress);
+                var peer = new Peer(ipAddress, port, peerId);
+
+                resultPeers.Add(peer);
+            }
+
+            return resultPeers;
+        }
+
+        private bool TryParseIPv4String(string IPv4Address, out byte[] byteAddress)
+        {
+            byteAddress = new byte[4];
+            var decimalStrings = IPv4Address.Split('.');
+            if (decimalStrings.Length != 4)
+                return false;
+
+            if (decimalStrings.Select(d => d.Length <= 3).Any(b => b == false)) //check if each string is 3 chars or bellow
+                return false;
+
+            try
+            {
+                var decimalInts = decimalStrings.Select(d => Convert.ToInt32(d)).ToList();
+                if (decimalInts.Select(i => i <= 255).Any(b => b == false))
+                    return false;
+
+                byteAddress = decimalInts.Select(i => (byte) i).ToArray();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string GetPeerIdIfAny(Dictionary<string, BencodedObject> bencodedPeerDict)
+        {
+            if (!bencodedPeerDict.TryGetValue("peer id", out BencodedObject bencodedPeerId))
+                return null;
+
+            if (bencodedPeerId.Type != BencodedType.String)
+                throw new Exception("Peer id must be a string");
+
+            return ((BencodedString) bencodedPeerId).Value;
+        }
+
+        private long GetPort(Dictionary<string, BencodedObject> bencodedPeerDict)
+        {
+            if (!bencodedPeerDict.TryGetValue("port", out BencodedObject bencodedPort))
+                throw new Exception("Each peer must contain a Port");
+
+            if (bencodedPort.Type != BencodedType.Integer)
+                throw new Exception("Port must be an integer");
+
+            return ((BencodedInteger) bencodedPort).Value;
+        }
+
+        private string GetIpAddress(Dictionary<string, BencodedObject> bencodedPeerDict)
+        {
+            if (!bencodedPeerDict.TryGetValue("ip", out BencodedObject bencodedIp))
+                throw new Exception("Each peer must contain an IP address");
+
+            if (bencodedIp.Type != BencodedType.String)
+                throw new Exception("Peer ip must be a string");
+
+            return ((BencodedString) bencodedIp).Value;
         }
 
         private List<Peer> GetByteStringPeers(string byteStringPeers)
