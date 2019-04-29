@@ -6,6 +6,7 @@ namespace BitTorrentEdu.DTOs
 {
     public class SocketPeer
     {
+        //TODO: Make Socket Peer disposable to close out connections on exit
         //TODO: Implament an event to listen to when peer disconnects (will be consumed by PeerConnector)
 
         public Peer Peer { get; }
