@@ -101,12 +101,12 @@ namespace BitTorrentEdu
                 throw new Exception("Wrong torrent file format. Pieces should be a string.");
 
             var piecesStr = ((BencodedString) bencodedLength).Value;
-            if (piecesStr.Length % TorrentInfoSingle.PieceHashLength != 0)
-                throw new Exception($"Wrong torrent file format. Each piece hash should be {TorrentInfoSingle.PieceHashLength} bytes long.");
+            if (piecesStr.Length % Constants.PieceHashLength != 0)
+                throw new Exception($"Wrong torrent file format. Each piece hash should be {Constants.PieceHashLength} bytes long.");
 
-            for (var i = 0; i < piecesStr.Length; i += TorrentInfoSingle.PieceHashLength)
+            for (var i = 0; i < piecesStr.Length; i += Constants.PieceHashLength)
             {
-                var pieceHash = piecesStr.Substring(i, Math.Min(TorrentInfoSingle.PieceHashLength, piecesStr.Length - i));
+                var pieceHash = piecesStr.Substring(i, Math.Min(Constants.PieceHashLength, piecesStr.Length - i));
                 result.Add(pieceHash);
             }
 
