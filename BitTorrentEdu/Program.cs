@@ -15,7 +15,7 @@ namespace BitTorrentEdu
 
             var httpClient = new HttpClientHelper();
             var trackerResponseFactory = new TrackerResponseFactory(parser);
-            var peerId = "-ZA0001-000000000001"
+            var peerId = "-ZA0001-000000000001";
             var tracker = new Tracker(httpClient, parser, trackerResponseFactory, peerId, 6881);
 
             var headTrackerResult = tracker.Track(torrent, TrackerEvent.Started).Result;

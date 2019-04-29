@@ -42,7 +42,7 @@ namespace BitTorrentEdu
             if (!TcpSocketHelper.TryEstablishConnection(peer.Ip, peer.Port, out Socket socket))
                 return false;
 
-            var socketPeer = new SocketPeer(peer, socket, InfoHash, pPeerId);
+            var socketPeer = new SocketPeer(peer, socket, InfoHash, PeerId);
             Peers.Add(socketPeer);
 
             return true;

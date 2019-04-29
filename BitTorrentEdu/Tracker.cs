@@ -9,10 +9,6 @@ namespace BitTorrentEdu
 {
     public class Tracker
     {
-        private const int PeerIdLength = 20; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Tracker_Request_Parameters
-        private const int MinPortNumber = 6881; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Tracker_Request_Parameters
-        private const int MaxPortNumber = 6889; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Tracker_Request_Parameters
-
         private IBencodeParser BencodeParser { get; set; }
         private IHttpClientHelper HttpClient { get; set; }
         private ITrackerResponseFactory TrackerResponseFactory { get; set; }
@@ -23,11 +19,11 @@ namespace BitTorrentEdu
 
         public Tracker(IHttpClientHelper httpClient, IBencodeParser bencodeParser, ITrackerResponseFactory trackerResponseFactory, string peerId, int port)
         {
-            if (peerId?.Length != PeerIdLength)
-                throw new ArgumentException($"Peer Id must be {PeerIdLength} characters");
+            if (peerId?.Length != Constants.PeerIdLength)
+                throw new ArgumentException($"Peer Id must be {Constants.PeerIdLength} characters");
 
-            if (port < MinPortNumber || port > MaxPortNumber)
-                throw new ArgumentException($"Port must be in range [{MinPortNumber}, {MaxPortNumber}]");
+            if (port < Constants.MinPortNumber || port > Constants.MaxPortNumber)
+                throw new ArgumentException($"Port must be in range [{Constants.MinPortNumber}, {Constants.MaxPortNumber}]");
 
             BencodeParser = bencodeParser;
             HttpClient = httpClient;

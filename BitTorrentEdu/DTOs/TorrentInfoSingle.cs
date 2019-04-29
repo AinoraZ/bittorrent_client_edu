@@ -36,8 +36,8 @@ namespace BitTorrentEdu.DTOs
 
         public void AddPieceHash(string pieceHash)
         {
-            if (pieceHash.Length != PieceHashLength)
-                throw new ArgumentException($"Piece hash must be {PieceHashLength} characters long");
+            if (pieceHash.Length != Constants.PieceHashLength)
+                throw new ArgumentException($"Piece hash must be {Constants.PieceHashLength} characters long");
 
             PieceHashes.Add(pieceHash);
         }
