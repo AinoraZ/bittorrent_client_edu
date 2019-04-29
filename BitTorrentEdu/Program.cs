@@ -20,7 +20,8 @@ namespace BitTorrentEdu
             var torrent = torrentFactory.GetTorrentFromFile(@"G:\University\uzd2\debian-9.8.0-amd64-DVD-1.iso.torrent");
 
             var httpClient = new HttpClientHelper();
-            var tracker = new Tracker(httpClient, parser, "-ZA0001-000000000001", 6881);
+            var trackerResponseFactory = new TrackerResponseFactory(parser);
+            var tracker = new Tracker(httpClient, parser, trackerResponseFactory, "-ZA0001-000000000001", 6881);
 
             tracker.Track(torrent, TrackerEvent.Started).Wait();
         }

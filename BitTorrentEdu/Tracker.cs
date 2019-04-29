@@ -18,12 +18,13 @@ namespace BitTorrentEdu
 
         private IBencodeParser BencodeParser { get; set; }
         private IHttpClientHelper HttpClient { get; set; }
+        private ITrackerResponseFactory TrackerResponseFactory { get; set; }
         public string PeerId { get; private set; }
         public int Port { get; private set; }
 
         private const string TrackerUriFormat = "?info_hash={0}&peer_id={1}&port={2}&uploaded={3}&downloaded={4}&left={5}&event={6}&compact={7}";
 
-        public Tracker(IHttpClientHelper httpClient, IBencodeParser bencodeParser, string peerId, int port)
+        public Tracker(IHttpClientHelper httpClient, IBencodeParser bencodeParser, ITrackerResponseFactory trackerResponseFactory, string peerId, int port)
         {
             if (peerId?.Length != PeerIdLength)
                 throw new ArgumentException($"Peer Id must be {PeerIdLength} characters");
@@ -33,6 +34,7 @@ namespace BitTorrentEdu
 
             BencodeParser = bencodeParser;
             HttpClient = httpClient;
+            TrackerResponseFactory = trackerResponseFactory;
             PeerId = peerId;
             Port = port;
         }
@@ -53,7 +55,7 @@ namespace BitTorrentEdu
             }
 
             var bytes = responseWrapper.ByteContent;
-            var bencodeObj = BencodeParser.ParseAllBencodeFromBytes(ref bytes);
+            var trackerReponse = TrackerResponseFactory.GetTrackerResponse(ref bytes);
         }
 
         private string FormatTrackerRequestData(string infoHash, long uploaded, long downloaded, long left, TrackerEvent trackerEvent, bool compact)

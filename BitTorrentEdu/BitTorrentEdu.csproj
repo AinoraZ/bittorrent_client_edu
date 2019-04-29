@@ -47,10 +47,12 @@
     <Compile Include="DTOs\Torrent.cs" />
     <Compile Include="DTOs\TorrentInfoSingle.cs" />
     <Compile Include="DTOs\TrackerResponse.cs" />
+    <Compile Include="ITrackerResponseFactory.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TorrentFactory.cs" />
     <Compile Include="Tracker.cs" />
+    <Compile Include="TrackerResponseFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
