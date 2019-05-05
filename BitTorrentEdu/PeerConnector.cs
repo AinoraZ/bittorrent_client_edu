@@ -14,7 +14,11 @@ namespace BitTorrentEdu
         public List<SocketPeer> Peers { get; private set; } = new List<SocketPeer>();
         public ITcpSocketHelper TcpSocketHelper { get; private set; }
         public byte[] InfoHash { get; }
-        public string PeerId { get;  }
+        public string PeerId { get; }
+
+        private List<Peer> PendingPeers { get; set; } = new List<Peer>();
+
+        private readonly object peerLock = new object();
 
         public PeerConnector(ITcpSocketHelper tcpSocketHelper, byte[] infoHash, string peerId)
         {
@@ -31,21 +35,73 @@ namespace BitTorrentEdu
 
         public bool IsPeerConnected (Peer peer)
         {
-            return Peers.Any(p => p.Peer.Ip == peer.Ip);
+            return Peers.Any(p => p.Peer.Ip == peer.Ip) || PendingPeers.Any(p => p.Ip == peer.Ip);
         }
 
         public bool TryConnectToPeer (Peer peer)
         {
-            if (IsPeerConnected(peer))
-                return false;
+            lock (peerLock)
+            {
+                if (IsPeerConnected(peer))
+                    return false;
+
+                PendingPeers.Add(peer);
+            }
 
             if (!TcpSocketHelper.TryEstablishConnection(peer.Ip, peer.Port, out Socket socket))
-                return false;
+            {
+                lock (peerLock)
+                {
+                    PendingPeers.Remove(peer);
+                    return false;
+                }
+            }
 
             var socketPeer = new SocketPeer(peer, socket, InfoHash, PeerId);
-            Peers.Add(socketPeer);
+            if (!socketPeer.TryInitiateHandsake())
+            {
+                lock (peerLock)
+                {
+                    PendingPeers.Remove(peer);
+                }
+                socketPeer.Dispose();
+                return false;
+            }
+
+            socketPeer.PeerEventHandler += OnPeerEvent;
+            lock(peerLock)
+            {
+                Peers.Add(socketPeer);
+                PendingPeers.Remove(peer);
+            }
+            Console.WriteLine($"Connected to peer {peer.Ip}:{peer.Port}");
+
+            socketPeer.StartReceive();
 
             return true;
+        }
+
+        public void OnPeerEvent(object sender, PeerEventArgs eventArgs)
+        {
+            var eventData = eventArgs.EventData;
+            var senderPeer = (SocketPeer) sender;
+            if (!Peers.Contains(senderPeer))
+                return;
+
+            Console.WriteLine($"Peer {Peers.FindIndex(p => p == senderPeer)}: EVENT {eventData.EventType}");
+
+            if (eventData.EventType == PeerEventType.ConnectionClosed)
+            {
+                lock (peerLock)
+                {
+                    if (!Peers.Contains(senderPeer))
+                        return;
+
+                    senderPeer.Dispose();
+                    Peers.Remove(senderPeer);
+                }
+            }
+            //TODO: Implament
         }
     }
 }

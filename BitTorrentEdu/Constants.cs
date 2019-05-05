@@ -13,5 +13,7 @@ namespace BitTorrentEdu
         public static readonly int PeerIdLength = 20; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Tracker_Request_Parameters
         public static readonly int MinPortNumber = 6881; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Tracker_Request_Parameters
         public static readonly int MaxPortNumber = 6889; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Tracker_Request_Parameters
+        public static readonly string HandshakeProtocolIdentifier = "BitTorrent protocol"; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Handshake
+        public static readonly int HandshakeReservedBytes = 8;
     }
 }

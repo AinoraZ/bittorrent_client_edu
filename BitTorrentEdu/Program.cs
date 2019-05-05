@@ -1,6 +1,7 @@
 ﻿using Bencode;
 using Sockets;
 using System;
+using System.Threading;
 
 namespace BitTorrentEdu
 {
@@ -25,9 +26,11 @@ namespace BitTorrentEdu
 
             foreach (var peer in headTrackerResult.Peers)
             {
-                if (peerConnector.TryConnectToPeer(peer))
-                    Console.WriteLine($"Connected to peer {peer.Ip}:{peer.Port}");
+                var t = new Thread(() => peerConnector.TryConnectToPeer(peer));
+                t.Start();
             }
+
+            while (true) { }
         }
     }
 }

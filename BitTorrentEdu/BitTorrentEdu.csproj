@@ -45,13 +45,16 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="DTOs\Peer.cs" />
-    <Compile Include="DTOs\SocketPeer.cs" />
+    <Compile Include="DTOs\PeerHandshake.cs" />
+    <Compile Include="PeerEventDataFactory.cs" />
+    <Compile Include="SocketPeer.cs" />
     <Compile Include="DTOs\Torrent.cs" />
     <Compile Include="DTOs\TorrentInfoSingle.cs" />
     <Compile Include="DTOs\TrackerResponse.cs" />
     <Compile Include="IPeerConnector.cs" />
     <Compile Include="ITrackerResponseFactory.cs" />
     <Compile Include="PeerConnector.cs" />
+    <Compile Include="DTOs\PeerEventArgs.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TorrentFactory.cs" />
