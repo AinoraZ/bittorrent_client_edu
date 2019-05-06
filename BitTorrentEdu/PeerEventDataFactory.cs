@@ -26,8 +26,6 @@ namespace BitTorrentEdu
 
         public PeerEventDataWrapper TryParsePeerEventDataFromByteArray(byte[] byteContent)
         {
-            Console.WriteLine($"Fuck {byteContent.Length}");
-
             if (byteContent.Length == 0)
             {
                 var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, "0 bytes sent, closed");
