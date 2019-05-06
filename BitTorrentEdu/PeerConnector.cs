@@ -24,13 +24,14 @@ namespace BitTorrentEdu
             }
         }
 
-        public ITcpSocketHelper TcpSocketHelper { get; private set; }
-        public byte[] InfoHash { get; }
         public string PeerId { get; }
 
+        private TorrentInfoSingle TorrentInfo { get; set; }
+        private ITcpSocketHelper TcpSocketHelper { get; }
         private List<Peer> PendingPeers { get; set; } = new List<Peer>();
+        private IPeerEventDataFactory PeerEventDataFactory { get; }
 
-        public PeerConnector(ITcpSocketHelper tcpSocketHelper, string peerId, TorrentInfoSingle torrentInfo)
+        public PeerConnector(IPeerEventDataFactory peerEventDataFactory, ITcpSocketHelper tcpSocketHelper, string peerId, TorrentInfoSingle torrentInfo)
         {
             if (torrentInfo.InfoHash.Length != Constants.InfoHashLength)
                 throw new ArgumentException($"Info hash must be {Constants.InfoHashLength} bytes");
@@ -38,8 +39,9 @@ namespace BitTorrentEdu
             if (peerId.Length != Constants.PeerIdLength)
                 throw new ArgumentException($"Peer id must be {Constants.PeerIdLength} bytes");
 
+            PeerEventDataFactory = peerEventDataFactory;
             TcpSocketHelper = tcpSocketHelper;
-            InfoHash = torrentInfo.InfoHash;
+            TorrentInfo = torrentInfo;
             PeerId = peerId;
         }
 
@@ -48,7 +50,7 @@ namespace BitTorrentEdu
             return _peers.Any(p => p.Peer.Ip.Equals(peer.Ip)) || PendingPeers.Any(p => p.Ip.Equals(peer.Ip));
         }
 
-        public bool TryConnectToPeer (Peer peer)
+        public bool TryConnectToPeer (Peer peer, EventHandler<PeerEventArgs> eventHandler = null)
         {
             lock (peerLock)
             {
@@ -67,7 +69,7 @@ namespace BitTorrentEdu
                 }
             }
 
-            var socketPeer = new SocketPeer(peer, socket, InfoHash, PeerId);
+            var socketPeer = new SocketPeer(PeerEventDataFactory, peer, socket, TorrentInfo, PeerId);
             if (!socketPeer.TryInitiateHandsake())
             {
                 lock (peerLock)
@@ -79,7 +81,8 @@ namespace BitTorrentEdu
             }
 
             socketPeer.PeerEventHandler += OnPeerEvent;
-            lock(peerLock)
+            socketPeer.PeerEventHandler += eventHandler;
+            lock (peerLock)
             {
                 _peers.Add(socketPeer);
                 PendingPeers.Remove(peer);

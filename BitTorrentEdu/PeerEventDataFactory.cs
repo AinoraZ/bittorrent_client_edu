@@ -4,11 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Utils;
 
 namespace BitTorrentEdu
 {
-    public class PeerEventDataFactory
+    public class PeerEventDataFactory : IPeerEventDataFactory
     {
+        public IByteConverter ByteConverter { get; set; } = new ByteConverter();
+
         private Dictionary<PeerEventType, int> EventTypesWithKnownLength = new Dictionary<PeerEventType, int>()
         {
             { PeerEventType.Choke, 1},
@@ -28,13 +31,13 @@ namespace BitTorrentEdu
         {
             if (byteContent.Length == 0)
             {
-                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, "0 bytes sent, closed");
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, 0, null, "0 bytes sent, closed");
                 return new PeerEventDataWrapper(peerEventData, new byte[0]);
             }
 
             if (byteContent.Length < 4)
             {
-                var peerEventData = new PeerEventData(PeerEventStatus.Partial, PeerEventType.Unknown, null);
+                var peerEventData = new PeerEventData(PeerEventStatus.Partial, PeerEventType.Unknown, 0, null);
                 return new PeerEventDataWrapper(peerEventData, byteContent); //everything sent is leftover, because it cannot be parsed yet
             }
 
@@ -42,13 +45,13 @@ namespace BitTorrentEdu
             if (length == 0)
             {
                 var leftovers = byteContent.Skip(4);
-                var peerEventData = new PeerEventData(PeerEventStatus.Ok, PeerEventType.KeepAlive, null);
+                var peerEventData = new PeerEventData(PeerEventStatus.Ok, PeerEventType.KeepAlive, 0, null);
                 return new PeerEventDataWrapper(peerEventData, leftovers.ToArray()); //No leftovers
             }
 
             if (byteContent.Length == 4)
             {
-                var peerEventData = new PeerEventData(PeerEventStatus.Partial, PeerEventType.Unknown, null);
+                var peerEventData = new PeerEventData(PeerEventStatus.Partial, PeerEventType.Unknown, length, null);
                 return new PeerEventDataWrapper(peerEventData, byteContent); //everything sent is leftover, because it cannot be parsed yet
             }
 
@@ -60,7 +63,7 @@ namespace BitTorrentEdu
                 //Event types are predefined and known in advance. If message id is not in the known event types
                 //That could mean this implamentation might not support it, some packets might have been lost or the client is incorrect. 
                 //Nothing else to do but close the connection, as returning to a good state will be too hard (or impossible)
-                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, $"Unexpected event type: {(int) eventType}");
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, 0, null, $"Unexpected event type: {(int) eventType}");
                 return new PeerEventDataWrapper(peerEventData, new byte[0]); //Excess data is thrown away as the connection will be closed
             }
 
@@ -70,13 +73,13 @@ namespace BitTorrentEdu
                 //A different length on a known event type indicates that some packets might have been lost or the client is incorrect. 
                 //Nothing else to do but close the connection, as returning to a good state will be too hard (or impossible)
                 var errorMessage = $"Unexpected length for known event type: Event type: {eventType}, Length: {length}";
-                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, errorMessage);
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, 0, null, errorMessage);
                 return new PeerEventDataWrapper(peerEventData, new byte[0]);
             }
 
             if (payloadBytes.Length < length - 1)
             {
-                var peerEventData = new PeerEventData(PeerEventStatus.Partial, eventType, null);
+                var peerEventData = new PeerEventData(PeerEventStatus.Partial, eventType, length, null);
                 return new PeerEventDataWrapper(peerEventData, byteContent); //everything sent is leftover, because it cannot be parsed yet
             }
 
@@ -101,17 +104,14 @@ namespace BitTorrentEdu
                 index++;
             }
 
-            var peerEventData =  new PeerEventData(PeerEventStatus.Ok, eventType, payload);
+            var peerEventData =  new PeerEventData(PeerEventStatus.Ok, eventType, length, payload);
             return new PeerEventDataWrapper(peerEventData, leftovers.ToArray());
         }
 
         private long ParseLength(byte[] byteContent)
         {
             var lengthBytes = byteContent.Take(4).ToArray();
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(lengthBytes);
-
-            return BitConverter.ToUInt32(lengthBytes, 0);
+            return ByteConverter.BytesToUint(lengthBytes);
         }
 
         private PeerEventType ParseEventType(byte[] byteContent)

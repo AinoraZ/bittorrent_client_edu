@@ -15,5 +15,7 @@ namespace BitTorrentEdu
         public static readonly int MaxPortNumber = 6889; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Tracker_Request_Parameters
         public static readonly string HandshakeProtocolIdentifier = "BitTorrent protocol"; //According to specification https://wiki.theory.org/index.php/BitTorrentSpecification#Handshake
         public static readonly int HandshakeReservedBytes = 8;
+        public static readonly uint MaxMessageSize = (uint) Math.Pow(2, 17);
+        public static readonly uint DefaultPieceSize = (uint) Math.Pow(2, 14);
     }
 }

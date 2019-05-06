@@ -58,6 +58,11 @@ namespace BitTorrentEdu
             var bencodedInfoDict = (BencodedDictionary) bencodedTorrentInfo;
             var infoDictionary = bencodedInfoDict.Value;
 
+            if (!infoDictionary.TryGetValue("name", out BencodedObject bencodedName))
+                throw new Exception("Wrong torrent file format. Info does not contain name information.");
+
+            var name = GetInfoName(bencodedName);
+
             if (!infoDictionary.TryGetValue("piece length", out BencodedObject bencodePieceLength))
                 throw new Exception("Wrong torrent file format. Info does not contain piece length information.");
 
@@ -74,7 +79,15 @@ namespace BitTorrentEdu
             var pieces = GetInfoPieces(bencodePieces);
             var hash = HashBencodeDictionary(bencodedInfoDict);
 
-            return new TorrentInfoSingle(hash, pieceLength, length, pieces);
+            return new TorrentInfoSingle(hash, pieceLength, length, pieces, name);
+        }
+
+        private string GetInfoName(BencodedObject bencodedName)
+        {
+            if (bencodedName.Type != BencodedType.String)
+                throw new Exception("Wrong torrent file format. Name should be a string.");
+
+            return ((BencodedString) bencodedName).Value;
         }
 
         private long GetInfoPieceLength(BencodedObject bencodedPieceLength)

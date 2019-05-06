@@ -1,5 +1,6 @@
 ﻿using BitTorrentEdu.DTOs;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -8,44 +9,60 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Utils;
 
 namespace BitTorrentEdu
 {
     public class SocketPeer : IDisposable
     {
-        //TODO: Implament an event to listen to when peer disconnects (will be consumed by PeerConnector)
-
         public event EventHandler<PeerEventArgs> PeerEventHandler;
 
         public Peer Peer { get; }
-        public Socket Socket { get; }
-        public byte[] InfoHash { get; }
-        public string PeerId { get; }
+        private List<long> PieceIndexes { get; } = new List<long>();
         public bool AmInterested { get; private set; } = false;
         public bool PeerChocking { get; private set; } = true;
         public bool AmWaitingForPiece { get; private set; } = false;
 
-        public List<long> PieceIndexes { get; } = new List<long>();
+        private Socket Socket { get; }
+        private byte[] InfoHash { get; }
+        private string PeerId { get; }
+        private long PieceLength { get; }
+        private long PieceAmount { get; }
 
         private Thread ReceiveThread { get; set; } = null;
         private bool ThreadRunning { get; set; } = true;
-
         private List<byte> TemporaryReceiveBuffer { get; set; } = new List<byte>(); 
 
-        public PeerEventDataFactory PeerEventDataFactory { get; set; } = new PeerEventDataFactory();
+        private IPeerEventDataFactory PeerEventDataFactory { get; set; } = new PeerEventDataFactory();
+        public IByteConverter ByteConverter { get; set; } = new ByteConverter();
 
-        public SocketPeer(Peer peer, Socket socket, byte[] infoHash, string peerId)
+        public SocketPeer(IPeerEventDataFactory peerEventDataFactory, Peer peer, Socket socket, TorrentInfoSingle torrentInfo, string peerId)
         {
-            if (infoHash.Length != Constants.InfoHashLength)
+            if (torrentInfo.InfoHash.Length != Constants.InfoHashLength)
                 throw new ArgumentException($"Info hash must be {Constants.InfoHashLength} bytes");
 
             if (peerId.Length != Constants.PeerIdLength)
                 throw new ArgumentException($"Peer id must be {Constants.PeerIdLength} bytes");
 
+            PeerEventDataFactory = peerEventDataFactory;
             Peer = peer;
             Socket = socket;
-            InfoHash = infoHash;
             PeerId = peerId;
+            InfoHash = torrentInfo.InfoHash;
+            PieceLength = torrentInfo.PieceLength;
+            PieceAmount = torrentInfo.PieceHashes.Count;
+        }
+
+        public long? RetrievePieceIndexIfAny(List<long> neededPieces)
+        {
+            try
+            {
+                return PieceIndexes.Intersect(neededPieces).First();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public bool TryInitiateHandsake()
@@ -55,7 +72,7 @@ namespace BitTorrentEdu
             try
             {
                 Socket.Send(peerHandshake.ToHandshakeBytes());
-                byte[] response = new byte[(int) Math.Pow(2, 17)];
+                byte[] response = new byte[Constants.MaxMessageSize];
                 var bytesRead = Socket.Receive(response);
 
                 var handshakeContent = new PeerHandshake(response.Take(bytesRead).ToArray());
@@ -103,8 +120,6 @@ namespace BitTorrentEdu
 
                 if (listenList.Contains(Socket))
                     RecieveResponse();
-
-                Thread.Sleep(500);
             }
         }
 
@@ -112,7 +127,7 @@ namespace BitTorrentEdu
         {
             try
             {
-                byte[] response = new byte[(int)Math.Pow(2, 17)];
+                byte[] response = new byte[Constants.MaxMessageSize];
                 var bytesReceived = Socket.Receive(response);
 
                 var trimmedResponse = response.Take(bytesReceived);
@@ -131,7 +146,7 @@ namespace BitTorrentEdu
             }
             catch (Exception ex)
             {
-                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, ex.Message);
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, 0, null, ex.Message);
                 var eventArgs = new PeerEventArgs(peerEventData);
                 PeerEventHandler(this, eventArgs);
             }
@@ -141,7 +156,7 @@ namespace BitTorrentEdu
         {
             if (peerEventData.EventStatus == PeerEventStatus.Partial)
             {
-                Console.WriteLine($"Partial data encountered. Expected length: {peerEventData.Length}");
+                //Console.WriteLine($"Partial data encountered. Expected length: {peerEventData.Length}");
                 return;
             }
 
@@ -162,7 +177,27 @@ namespace BitTorrentEdu
 
         public void ParseBitfield(PeerEventData peerEventData)
         {
+            var byteBitsList = peerEventData.Payload.Select(b => new BitArray(new byte[] { b }));
 
+            long pieceIndex = 0;
+            foreach (var byteBits in byteBitsList)
+            {
+                for (int byteIndex = 7; byteIndex >= 0; byteIndex--)
+                {
+                    if (pieceIndex >= PieceAmount)
+                        break;
+
+                    if (byteBits[byteIndex])
+                        PieceIndexes.Add(pieceIndex);
+
+                    pieceIndex++;
+                }
+            }
+
+            if (pieceIndex < PieceAmount - 1)
+            {
+                //Bad bitfield
+            }
         }
 
         public void SendKeepAlive()
@@ -183,20 +218,11 @@ namespace BitTorrentEdu
             AmWaitingForPiece = true;
             var sendContent = new List<byte> { 0, 0, 0, 0x0d, 6 };
 
-            sendContent.AddRange(UIntToBytes(pieceIndex));
-            sendContent.AddRange(UIntToBytes(blockBeginIndex));
-            sendContent.AddRange(UIntToBytes(blockLength));
+            sendContent.AddRange(ByteConverter.UIntToBytes(pieceIndex));
+            sendContent.AddRange(ByteConverter.UIntToBytes(blockBeginIndex));
+            sendContent.AddRange(ByteConverter.UIntToBytes(blockLength));
 
             Socket.Send(sendContent.ToArray());
-        }
-
-        private byte[] UIntToBytes(uint value)
-        {
-            var byteValue = BitConverter.GetBytes(value);
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(byteValue);
-
-            return byteValue;
         }
 
         public void Dispose()

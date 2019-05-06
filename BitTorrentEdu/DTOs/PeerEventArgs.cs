@@ -25,14 +25,6 @@ namespace BitTorrentEdu.DTOs
 
         public PeerEventData() { }
 
-        public PeerEventData(PeerEventStatus eventStatus, PeerEventType peerEventType, byte[] payload, string errorMsg = null)
-        {
-            EventStatus = eventStatus;
-            EventType = peerEventType;
-            Payload = payload;
-            ErrorMessage = errorMsg;
-        }
-
         public PeerEventData(PeerEventStatus eventStatus, PeerEventType peerEventType, long length, byte[] payload, string errorMsg = null)
         {
             EventStatus = eventStatus;
