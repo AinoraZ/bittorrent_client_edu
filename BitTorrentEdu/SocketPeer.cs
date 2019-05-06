@@ -62,14 +62,17 @@ namespace BitTorrentEdu
 
         public long? RetrievePieceIndexIfAny(List<long> neededPieces)
         {
-            try
-            {
-                return PieceIndexes.Intersect(neededPieces).First();
-            }
-            catch
-            {
+            if (neededPieces.Count == 0)
                 return null;
-            }
+
+            if (PieceIndexes.Count == 0)
+                return null;
+
+            var intersection = PieceIndexes.Intersect(neededPieces).ToList();
+            if (intersection.Count == 0)
+                return null;
+
+            return intersection.First();
         }
 
         public bool TryInitiateHandsake()
@@ -81,6 +84,8 @@ namespace BitTorrentEdu
                 Socket.Send(peerHandshake.ToHandshakeBytes());
                 byte[] response = new byte[Constants.MaxMessageSize];
                 var bytesRead = Socket.Receive(response);
+
+                //Handle disconnect on handshake receive
 
                 var handshakeContent = new PeerHandshake(response.Take(bytesRead).ToArray());
 

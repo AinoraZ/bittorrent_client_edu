@@ -18,6 +18,7 @@ namespace Sockets
             }
             catch (Exception ex)
             {
+                //Todo: Log exception (Make it not show up in the debugger if possible?)
                 return false;
             }
 
