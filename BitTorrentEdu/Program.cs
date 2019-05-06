@@ -19,18 +19,44 @@ namespace BitTorrentEdu
 
         static void Main(string[] args)
         {
+            if (args.Length != 3)
+            {
+                Console.Error.WriteLine($"You must pass 3 arguments: Path to torrent, Download directory, Port (Range: [{Constants.MinPortNumber}:{Constants.MaxPortNumber}])");
+                return;
+            }
+
+            var torrentPath = args[0];
+            if (!File.Exists(torrentPath))
+            {
+                Console.Error.WriteLine("Passed torrent does not exist");
+                return;
+            }
+
+            var partialSaveDir = args[1];
+            if (!int.TryParse(args[2], out int port))
+            {
+                Console.Error.WriteLine("Invalid port int passed");
+                return;
+            }
+
+            if (port > Constants.MaxPortNumber || port < Constants.MinPortNumber)
+            {
+                Console.Error.WriteLine($"Port must be in range: [{Constants.MinPortNumber}:{Constants.MaxPortNumber}]");
+                return;
+            }
+
             var parser = new BencodeParser();
 
             var torrentFactory = new TorrentFactory(parser);
-            var torrent = torrentFactory.GetTorrentFromFile(@"G:\University\uzd2\somePdf.torrent");
+            var torrent = torrentFactory.GetTorrentFromFile(torrentPath);
 
             var fileName = Path.GetFileNameWithoutExtension(torrent.Info.Name);
-            string saveDir = Path.Combine(@"G:\University\uzd2\Downloads\", fileName);
+            string saveDir = Path.Combine(partialSaveDir, fileName);
 
             foreach (var pieceIndex in Enumerable.Range(0, torrent.Info.PieceHashes.Count))
             {
                 var pieceLength = torrent.Info.PieceLength;
-                if (pieceIndex == torrent.Info.PieceHashes.Count - 1)
+                if (pieceIndex == torrent.Info.PieceHashes.Count - 1) //Last piece is odd length
                     pieceLength = torrent.Info.Length % pieceLength;
 
                 var piece = new TorrentPiece(pieceIndex, pieceLength, saveDir);
@@ -40,7 +66,7 @@ namespace BitTorrentEdu
             var httpClient = new HttpClientHelper();
             var trackerResponseFactory = new TrackerResponseFactory(parser);
             var peerId = "-ZA0001-000000000001";
-            var tracker = new Tracker(httpClient, parser, trackerResponseFactory, peerId, 6881);
+            var tracker = new Tracker(httpClient, parser, trackerResponseFactory, peerId, port);
 
             //var headTrackerResult = tracker.Track(torrent, TrackerEvent.Started).Result;
 
@@ -49,7 +75,6 @@ namespace BitTorrentEdu
             var peerConnector = new PeerConnector(peerEventDataFactory, tcpSocketHelper, peerId, torrent.Info);
 
             Console.Write("Downloading file... ");
-
             using (var progress = new ProgressBar(40))
             {
                 while (GetNonCompletedPieces().Any())
@@ -61,9 +86,10 @@ namespace BitTorrentEdu
                         t.Start();
                     }
 
-                    progress.Report((double) (Pieces.Count - GetNonCompletedPieces().Count) / Pieces.Count);
+                    var completedPieces = Pieces.Count - GetNonCompletedPieces().Count;
+                    progress.Report((double) completedPieces / Pieces.Count);
 
-                    Thread.Sleep(20);
+                    Thread.Sleep(Constants.UpdateClockMs);
                     var neededPieces = GetAvailableForDownloadPieces();
 
                     foreach (var peer in peerConnector.Peers)
