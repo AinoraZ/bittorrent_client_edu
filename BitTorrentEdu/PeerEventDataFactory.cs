@@ -9,7 +9,7 @@ namespace BitTorrentEdu
 {
     public class PeerEventDataFactory
     {
-        private Dictionary<PeerEventType, int> EventTypesWithKnownLength= new Dictionary<PeerEventType, int>()
+        private Dictionary<PeerEventType, int> EventTypesWithKnownLength = new Dictionary<PeerEventType, int>()
         {
             { PeerEventType.Choke, 1},
             { PeerEventType.Unchoke, 1},
@@ -19,44 +19,118 @@ namespace BitTorrentEdu
             { PeerEventType.Request, 13},
         };
 
-        public PeerEventData GeneratePeerEventDataFromByteArray (byte[] byteContent)
+        public PeerEventDataWrapper TryParsePeerEventDataFromEnumerable(IEnumerable<byte> byteContent)
         {
-            PeerEventType eventType;
+            return TryParsePeerEventDataFromByteArray(byteContent.ToArray());
+        }
+
+        public PeerEventDataWrapper TryParsePeerEventDataFromByteArray(byte[] byteContent)
+        {
+            Console.WriteLine($"Fuck {byteContent.Length}");
 
             if (byteContent.Length == 0)
-                return new PeerEventData(PeerEventStatus.Ok, PeerEventType.ConnectionClosed, 0, null);
+            {
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, "0 bytes sent, closed");
+                return new PeerEventDataWrapper(peerEventData, new byte[0]);
+            }
 
             if (byteContent.Length < 4)
-                return new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, byteContent.Length, null);
+            {
+                var peerEventData = new PeerEventData(PeerEventStatus.Partial, PeerEventType.Unknown, null);
+                return new PeerEventDataWrapper(peerEventData, byteContent); //everything sent is leftover, because it cannot be parsed yet
+            }
 
+            var length = ParseLength(byteContent);
+            if (length == 0)
+            {
+                var leftovers = byteContent.Skip(4);
+                var peerEventData = new PeerEventData(PeerEventStatus.Ok, PeerEventType.KeepAlive, null);
+                return new PeerEventDataWrapper(peerEventData, leftovers.ToArray()); //No leftovers
+            }
+
+            if (byteContent.Length == 4)
+            {
+                var peerEventData = new PeerEventData(PeerEventStatus.Partial, PeerEventType.Unknown, null);
+                return new PeerEventDataWrapper(peerEventData, byteContent); //everything sent is leftover, because it cannot be parsed yet
+            }
+
+            var eventType = ParseEventType(byteContent); //Single byte for message ID
+            var payloadBytes = byteContent.Skip(5).ToArray();
+
+            if (!Enum.IsDefined(typeof(PeerEventType), eventType))
+            {
+                //Event types are predefined and known in advance. If message id is not in the known event types
+                //That could mean this implamentation might not support it, some packets might have been lost or the client is incorrect. 
+                //Nothing else to do but close the connection, as returning to a good state will be too hard (or impossible)
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, $"Unexpected event type: {(int) eventType}");
+                return new PeerEventDataWrapper(peerEventData, new byte[0]); //Excess data is thrown away as the connection will be closed
+            }
+
+            if (EventTypesWithKnownLength.TryGetValue(eventType, out int expectedLength) && length != expectedLength)
+            {
+                //Length for some event types is known in advance. 
+                //A different length on a known event type indicates that some packets might have been lost or the client is incorrect. 
+                //Nothing else to do but close the connection, as returning to a good state will be too hard (or impossible)
+                var errorMessage = $"Unexpected length for known event type: Event type: {eventType}, Length: {length}";
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, errorMessage);
+                return new PeerEventDataWrapper(peerEventData, new byte[0]);
+            }
+
+            if (payloadBytes.Length < length - 1)
+            {
+                var peerEventData = new PeerEventData(PeerEventStatus.Partial, eventType, null);
+                return new PeerEventDataWrapper(peerEventData, byteContent); //everything sent is leftover, because it cannot be parsed yet
+            }
+
+            //If we got to this point, payload can be parsed
+            return ParsePeerEvent(length, eventType, payloadBytes);
+        }
+
+        private PeerEventDataWrapper ParsePeerEvent (long length, PeerEventType eventType, byte[] unparsedPayload)
+        {
+            var leftovers = new List<byte>();
+            var payload = new byte[length - 1];
+            int index = 0;
+            foreach (var unsortedByte in unparsedPayload)
+            {
+                if (index == length - 1)
+                {
+                    leftovers.Add(unsortedByte);
+                    continue;
+                }
+
+                payload[index] = unsortedByte;
+                index++;
+            }
+
+            var peerEventData =  new PeerEventData(PeerEventStatus.Ok, eventType, payload);
+            return new PeerEventDataWrapper(peerEventData, leftovers.ToArray());
+        }
+
+        private long ParseLength(byte[] byteContent)
+        {
             var lengthBytes = byteContent.Take(4).ToArray();
             if (BitConverter.IsLittleEndian)
                 Array.Reverse(lengthBytes);
 
-            var length = BitConverter.ToUInt32(lengthBytes, 0);
-            if (length == 0)
-                return new PeerEventData(PeerEventStatus.Ok, PeerEventType.KeepAlive, 4, null);
+            return BitConverter.ToUInt32(lengthBytes, 0);
+        }
 
-            var offset = 4;
-            eventType = (PeerEventType) byteContent.Skip(offset).Take(1).Single(); //Single byte for message ID
+        private PeerEventType ParseEventType(byte[] byteContent)
+        {
+            return (PeerEventType) byteContent[4];
+        }
+    }
 
-            offset++;
-            var payloadBytes = byteContent.Skip(offset).ToArray();
+    public class PeerEventDataWrapper
+    {
+        public PeerEventData EventData { get; }
+        public byte[] UnusedBytes { get; }
 
-            if (EventTypesWithKnownLength.TryGetValue(eventType, out int expectedLength))
-                if(expectedLength != length)
-                    return new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, length, payloadBytes);
-
-            if (!Enum.IsDefined(typeof(PeerEventType), eventType))
-                return new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, length, payloadBytes);
-
-            if (payloadBytes.Length > length - 1)
-                return new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, length, payloadBytes);
-
-            var eventStatus = (payloadBytes.Length == length - 1) ? PeerEventStatus.Ok : PeerEventStatus.Partial;
-
-            var forLength = Math.Min(payloadBytes.Length, length - 1);
-            return new PeerEventData(eventStatus, eventType, length, payloadBytes);
+        public PeerEventDataWrapper(PeerEventData eventData, byte[] unusedBytes)
+        {
+            EventData = eventData;
+            UnusedBytes = unusedBytes;
         }
     }
 }

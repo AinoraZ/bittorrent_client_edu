@@ -21,15 +21,25 @@ namespace BitTorrentEdu.DTOs
         public PeerEventType EventType { get; private set; }
         public long Length { get; private set; }
         public byte[] Payload { get; private set; }
+        public string ErrorMessage { get; private set; }
 
         public PeerEventData() { }
 
-        public PeerEventData(PeerEventStatus eventStatus, PeerEventType peerEventType, long length, byte[] payload)
+        public PeerEventData(PeerEventStatus eventStatus, PeerEventType peerEventType, byte[] payload, string errorMsg = null)
+        {
+            EventStatus = eventStatus;
+            EventType = peerEventType;
+            Payload = payload;
+            ErrorMessage = errorMsg;
+        }
+
+        public PeerEventData(PeerEventStatus eventStatus, PeerEventType peerEventType, long length, byte[] payload, string errorMsg = null)
         {
             EventStatus = eventStatus;
             EventType = peerEventType;
             Length = length;
             Payload = payload;
+            ErrorMessage = errorMsg;
         }
     }
 
@@ -44,7 +54,8 @@ namespace BitTorrentEdu.DTOs
         Bitfield = 5,
         Request = 6,
         Piece = 7,
-        ConnectionClosed = 9999
+        ConnectionClosed = 256,
+        Unknown = 300
     }
 
     public enum PeerEventStatus

@@ -7,6 +7,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace BitTorrentEdu
 {
@@ -22,9 +23,14 @@ namespace BitTorrentEdu
         public string PeerId { get; }
         public bool AmInterested { get; private set; } = false;
         public bool PeerChocking { get; private set; } = true;
+        public bool AmWaitingForPiece { get; private set; } = false;
+
+        public List<long> PieceIndexes { get; } = new List<long>();
 
         private Thread ReceiveThread { get; set; } = null;
         private bool ThreadRunning { get; set; } = true;
+
+        private List<byte> TemporaryReceiveBuffer { get; set; } = new List<byte>(); 
 
         public PeerEventDataFactory PeerEventDataFactory { get; set; } = new PeerEventDataFactory();
 
@@ -49,13 +55,19 @@ namespace BitTorrentEdu
             try
             {
                 Socket.Send(peerHandshake.ToHandshakeBytes());
-                byte[] response = new byte[256];
+                byte[] response = new byte[(int) Math.Pow(2, 17)];
                 var bytesRead = Socket.Receive(response);
 
                 var handshakeContent = new PeerHandshake(response.Take(bytesRead).ToArray());
 
                 if (!InfoHash.SequenceEqual(handshakeContent.InfoHash))
                     return false;
+
+                var totalHandshakeBytes = handshakeContent.Length + handshakeContent.Reserved.Length + 1 +
+                    handshakeContent.InfoHash.Length + handshakeContent.PeerId.Length;
+
+                var leftovers = response.Skip(totalHandshakeBytes).Take(bytesRead - totalHandshakeBytes);
+                TemporaryReceiveBuffer.AddRange(leftovers);
 
                 return true;
             }
@@ -76,7 +88,6 @@ namespace BitTorrentEdu
 
         public void EndReceive()
         {
-            ReceiveThread?.Interrupt();
             ThreadRunning = false;
             ReceiveThread = null;
         }
@@ -93,27 +104,8 @@ namespace BitTorrentEdu
                 if (listenList.Contains(Socket))
                     RecieveResponse();
 
-                Thread.Sleep(1000);
+                Thread.Sleep(500);
             }
-        }
-
-        public async Task SendKeepAliveAsync()
-        {
-            await Task.Delay(1);
-            throw new NotImplementedException();
-        }
-
-        public async Task SendInterestAsync(bool areInterested)
-        {
-            AmInterested = areInterested;
-            await Task.Delay(1);
-            throw new NotImplementedException();
-        }
-
-        public async Task RequestPieceAsync(int pieceIndex, int blockBeginIndex, int blockLength)
-        {
-            await Task.Delay(1);
-            throw new NotImplementedException();
         }
 
         public void RecieveResponse()
@@ -123,42 +115,93 @@ namespace BitTorrentEdu
                 byte[] response = new byte[(int)Math.Pow(2, 17)];
                 var bytesReceived = Socket.Receive(response);
 
-                var trimmedResponse = response.Take(bytesReceived).ToArray();
-                var peerEvents = new List<PeerEventData>();
-                int totalBytesRead = 0;
-                var peerEventData = PeerEventDataFactory.GeneratePeerEventDataFromByteArray(trimmedResponse.Skip(totalBytesRead).ToArray());
+                var trimmedResponse = response.Take(bytesReceived);
+                TemporaryReceiveBuffer.AddRange(trimmedResponse);
 
-                if (peerEventData.EventStatus == PeerEventStatus.Error)
+                PeerEventData peerEventData;
+                do
                 {
-                    Console.WriteLine($"Peer {Peer.Ip}: Unsupported client encountered");
+                    var peerEventDataWrapper = PeerEventDataFactory.TryParsePeerEventDataFromEnumerable(TemporaryReceiveBuffer);
+                    TemporaryReceiveBuffer = peerEventDataWrapper.UnusedBytes.ToList(); //Store unused bytes for later use
+
+                    peerEventData = peerEventDataWrapper.EventData;
+                    HandlePeerEvent(peerEventData);
                 }
-
-                if (peerEventData.EventStatus == PeerEventStatus.Partial)
-                {
-                    Console.WriteLine($"Event {peerEventData.EventType}: Peer {Peer.Ip}: Waiting for more data");
-                }
-
-                if (peerEventData.EventType == PeerEventType.Choke)
-                    PeerChocking = true;
-                if (peerEventData.EventType == PeerEventType.Unchoke)
-                    PeerChocking = false;
-
-                var eventArgs = new PeerEventArgs(peerEventData);
-                PeerEventHandler(this, eventArgs);
-
+                while (TemporaryReceiveBuffer.Count != 0 && peerEventData.EventStatus == PeerEventStatus.Ok);
             }
             catch (Exception ex)
             {
-                //TODO: Change with normal logging
-                Console.WriteLine(ex.Message);
+                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, null, ex.Message);
+                var eventArgs = new PeerEventArgs(peerEventData);
+                PeerEventHandler(this, eventArgs);
+            }
+        }
+
+        public void HandlePeerEvent (PeerEventData peerEventData)
+        {
+            if (peerEventData.EventStatus == PeerEventStatus.Partial)
+            {
+                Console.WriteLine($"Partial data encountered. Expected length: {peerEventData.Length}");
+                return;
             }
 
+            if (peerEventData.EventType == PeerEventType.Choke)
+                PeerChocking = true;
+            if (peerEventData.EventType == PeerEventType.Unchoke)
+                PeerChocking = false;
+            if (peerEventData.EventType == PeerEventType.Piece)
+                AmWaitingForPiece = false;
+            if (peerEventData.EventType == PeerEventType.Bitfield)
+            {
+                ParseBitfield(peerEventData);
+            }
+
+            var eventArgs = new PeerEventArgs(peerEventData);
+            PeerEventHandler(this, eventArgs);
+        }
+
+        public void ParseBitfield(PeerEventData peerEventData)
+        {
+
+        }
+
+        public void SendKeepAlive()
+        {
+            var sendContent = new byte[] { 0, 0, 0, 0 };
+            Socket.Send(sendContent);
+        }
+
+        public void SendInterest(bool areInterested)
+        {
+            AmInterested = areInterested;
+            var sendContent = new byte[] { 0, 0, 0, 1, areInterested ? (byte)2 : (byte)3 };
+            Socket.Send(sendContent);
+        }
+
+        public void RequestPiece(uint pieceIndex, uint blockBeginIndex, uint blockLength)
+        {
+            AmWaitingForPiece = true;
+            var sendContent = new List<byte> { 0, 0, 0, 0x0d, 6 };
+
+            sendContent.AddRange(UIntToBytes(pieceIndex));
+            sendContent.AddRange(UIntToBytes(blockBeginIndex));
+            sendContent.AddRange(UIntToBytes(blockLength));
+
+            Socket.Send(sendContent.ToArray());
+        }
+
+        private byte[] UIntToBytes(uint value)
+        {
+            var byteValue = BitConverter.GetBytes(value);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(byteValue);
+
+            return byteValue;
         }
 
         public void Dispose()
         {
             EndReceive();
-            Socket.Shutdown(SocketShutdown.Both);
             Socket.Close();
         }
     }

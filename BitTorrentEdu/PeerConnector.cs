@@ -11,31 +11,41 @@ namespace BitTorrentEdu
 {
     public class PeerConnector : IPeerConnector
     {
-        public List<SocketPeer> Peers { get; private set; } = new List<SocketPeer>();
+        private readonly object peerLock = new object();
+
+        private List<SocketPeer> _peers = new List<SocketPeer>();
+        public List<SocketPeer> Peers {
+            get 
+            {
+                lock (peerLock)
+                {
+                    return _peers.ToList();
+                }
+            }
+        }
+
         public ITcpSocketHelper TcpSocketHelper { get; private set; }
         public byte[] InfoHash { get; }
         public string PeerId { get; }
 
         private List<Peer> PendingPeers { get; set; } = new List<Peer>();
 
-        private readonly object peerLock = new object();
-
-        public PeerConnector(ITcpSocketHelper tcpSocketHelper, byte[] infoHash, string peerId)
+        public PeerConnector(ITcpSocketHelper tcpSocketHelper, string peerId, TorrentInfoSingle torrentInfo)
         {
-            if (infoHash.Length != Constants.InfoHashLength)
+            if (torrentInfo.InfoHash.Length != Constants.InfoHashLength)
                 throw new ArgumentException($"Info hash must be {Constants.InfoHashLength} bytes");
 
             if (peerId.Length != Constants.PeerIdLength)
                 throw new ArgumentException($"Peer id must be {Constants.PeerIdLength} bytes");
 
             TcpSocketHelper = tcpSocketHelper;
-            InfoHash = infoHash;
+            InfoHash = torrentInfo.InfoHash;
             PeerId = peerId;
         }
 
         public bool IsPeerConnected (Peer peer)
         {
-            return Peers.Any(p => p.Peer.Ip == peer.Ip) || PendingPeers.Any(p => p.Ip == peer.Ip);
+            return _peers.Any(p => p.Peer.Ip.Equals(peer.Ip)) || PendingPeers.Any(p => p.Ip.Equals(peer.Ip));
         }
 
         public bool TryConnectToPeer (Peer peer)
@@ -71,10 +81,9 @@ namespace BitTorrentEdu
             socketPeer.PeerEventHandler += OnPeerEvent;
             lock(peerLock)
             {
-                Peers.Add(socketPeer);
+                _peers.Add(socketPeer);
                 PendingPeers.Remove(peer);
             }
-            Console.WriteLine($"Connected to peer {peer.Ip}:{peer.Port}");
 
             socketPeer.StartReceive();
 
@@ -85,23 +94,25 @@ namespace BitTorrentEdu
         {
             var eventData = eventArgs.EventData;
             var senderPeer = (SocketPeer) sender;
-            if (!Peers.Contains(senderPeer))
-                return;
-
-            Console.WriteLine($"Peer {Peers.FindIndex(p => p == senderPeer)}: EVENT {eventData.EventType}");
+            lock (peerLock)
+            {
+                if (!Peers.Contains(senderPeer))
+                    return;
+            }
 
             if (eventData.EventType == PeerEventType.ConnectionClosed)
             {
+                Console.WriteLine($"Peer {senderPeer.Peer.Ip}: EVENT {eventData.EventType}: Error: {eventData.ErrorMessage}");
                 lock (peerLock)
                 {
-                    if (!Peers.Contains(senderPeer))
+                    if (!_peers.Contains(senderPeer))
                         return;
 
                     senderPeer.Dispose();
-                    Peers.Remove(senderPeer);
+                    _peers.Remove(senderPeer);
+                    return;
                 }
             }
-            //TODO: Implament
         }
     }
 }
