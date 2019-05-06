@@ -57,6 +57,9 @@ namespace BitTorrentEdu
                 if (IsPeerConnected(peer))
                     return false;
 
+                if (_peers.Count + PendingPeers.Count >= Constants.MaxPeers)
+                    return false;
+
                 PendingPeers.Add(peer);
             }
 
@@ -93,6 +96,18 @@ namespace BitTorrentEdu
             return true;
         }
 
+        public void DisconnectPeer(SocketPeer peer)
+        {
+            lock (peerLock)
+            {
+                if (!_peers.Contains(peer))
+                    return;
+
+                peer.Dispose();
+                _peers.Remove(peer);
+            }
+        }
+
         public void OnPeerEvent(object sender, PeerEventArgs eventArgs)
         {
             var eventData = eventArgs.EventData;
@@ -105,16 +120,7 @@ namespace BitTorrentEdu
 
             if (eventData.EventType == PeerEventType.ConnectionClosed)
             {
-                Console.WriteLine($"Peer {senderPeer.Peer.Ip}: EVENT {eventData.EventType}: Error: {eventData.ErrorMessage}");
-                lock (peerLock)
-                {
-                    if (!_peers.Contains(senderPeer))
-                        return;
-
-                    senderPeer.Dispose();
-                    _peers.Remove(senderPeer);
-                    return;
-                }
+                DisconnectPeer(senderPeer);
             }
         }
     }

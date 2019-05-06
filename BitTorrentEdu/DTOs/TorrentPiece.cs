@@ -23,6 +23,7 @@ namespace BitTorrentEdu.DTOs
 
         public bool TryAddBlock(byte[] block, uint offset)
         {
+            Pending = false;
             if (offset != PieceData.Count)
                 return false;
 
@@ -31,7 +32,6 @@ namespace BitTorrentEdu.DTOs
 
             PieceData.AddRange(block);
             Complete = PieceData.Count == PieceLength;
-            Pending = false;
 
             if (Complete)
                 StartCompleteSequence();
@@ -41,10 +41,12 @@ namespace BitTorrentEdu.DTOs
 
         public void StartCompleteSequence()
         {
+            //Console.WriteLine($"Piece {PieceIndex}: Completed");
             if(!Directory.Exists(SaveDirectory))
                 Directory.CreateDirectory(SaveDirectory);
 
             File.WriteAllBytes(GetFullPath(), PieceData.ToArray());
+            PieceData = null; //Let the bytes be gc'ed
         }
 
         public string GetFileName()

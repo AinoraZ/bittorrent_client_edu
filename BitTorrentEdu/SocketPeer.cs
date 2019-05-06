@@ -21,7 +21,14 @@ namespace BitTorrentEdu
         private List<long> PieceIndexes { get; } = new List<long>();
         public bool AmInterested { get; private set; } = false;
         public bool PeerChocking { get; private set; } = true;
-        public bool AmWaitingForPiece { get; private set; } = false;
+        public long? RequestedPiece { get; private set; } = null;
+        public DateTime? RequestPieceTime { get; private set; } = null;
+        public bool AmWaitingForPiece {
+            get 
+            {
+                return RequestedPiece != null;
+            }
+        }
 
         private Socket Socket { get; }
         private byte[] InfoHash { get; }
@@ -155,21 +162,16 @@ namespace BitTorrentEdu
         public void HandlePeerEvent (PeerEventData peerEventData)
         {
             if (peerEventData.EventStatus == PeerEventStatus.Partial)
-            {
-                //Console.WriteLine($"Partial data encountered. Expected length: {peerEventData.Length}");
                 return;
-            }
 
             if (peerEventData.EventType == PeerEventType.Choke)
                 PeerChocking = true;
             if (peerEventData.EventType == PeerEventType.Unchoke)
                 PeerChocking = false;
             if (peerEventData.EventType == PeerEventType.Piece)
-                AmWaitingForPiece = false;
+                PieceRequestComplete();
             if (peerEventData.EventType == PeerEventType.Bitfield)
-            {
                 ParseBitfield(peerEventData);
-            }
 
             var eventArgs = new PeerEventArgs(peerEventData);
             PeerEventHandler(this, eventArgs);
@@ -215,7 +217,8 @@ namespace BitTorrentEdu
 
         public void RequestPiece(uint pieceIndex, uint blockBeginIndex, uint blockLength)
         {
-            AmWaitingForPiece = true;
+            RequestedPiece = pieceIndex;
+            RequestPieceTime = DateTime.Now;
             var sendContent = new List<byte> { 0, 0, 0, 0x0d, 6 };
 
             sendContent.AddRange(ByteConverter.UIntToBytes(pieceIndex));
@@ -223,6 +226,12 @@ namespace BitTorrentEdu
             sendContent.AddRange(ByteConverter.UIntToBytes(blockLength));
 
             Socket.Send(sendContent.ToArray());
+        }
+
+        public void PieceRequestComplete()
+        {
+            RequestedPiece = null;
+            RequestPieceTime = null;
         }
 
         public void Dispose()

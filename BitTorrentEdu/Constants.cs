@@ -17,5 +17,7 @@ namespace BitTorrentEdu
         public static readonly int HandshakeReservedBytes = 8;
         public static readonly uint MaxMessageSize = (uint) Math.Pow(2, 17);
         public static readonly uint DefaultPieceSize = (uint) Math.Pow(2, 14);
+        public static readonly int MaxPeers = 30;
+        public static readonly int PieceTimeout = 20;
     }
 }

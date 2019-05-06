@@ -24,7 +24,8 @@ namespace BitTorrentEdu
             var torrentFactory = new TorrentFactory(parser);
             var torrent = torrentFactory.GetTorrentFromFile(@"G:\University\uzd2\somePdf.torrent");
 
-            string saveDir = @"G:\University\uzd2\Downloads\";
+            var fileName = Path.GetFileNameWithoutExtension(torrent.Info.Name);
+            string saveDir = Path.Combine(@"G:\University\uzd2\Downloads\", fileName);
 
             foreach (var pieceIndex in Enumerable.Range(0, torrent.Info.PieceHashes.Count))
             {
@@ -47,66 +48,76 @@ namespace BitTorrentEdu
             var peerEventDataFactory = new PeerEventDataFactory();
             var peerConnector = new PeerConnector(peerEventDataFactory, tcpSocketHelper, peerId, torrent.Info);
 
-            if (peerConnector.Peers.Count < 30)
-            {
-                var trackerResult = tracker.Track(torrent, TrackerEvent.Started).Result;
-                foreach (var peer in trackerResult.Peers)
-                {
-                    var t = new Thread(() => peerConnector.TryConnectToPeer(peer, OnPeerEvent));
-                    t.Start();
-                }
-            }
-            while (GetNonCompletedPieces().Any())
-            {
-                Thread.Sleep(100);
-                var neededPieces = GetAvailableForDownloadPieces();
+            Console.Write("Downloading file... ");
 
-                foreach (var peer in peerConnector.Peers)
+            using (var progress = new ProgressBar(40))
+            {
+                while (GetNonCompletedPieces().Any())
                 {
-                    Console.Write("{0, -40} {1, -30}", $"Connected to peer: {peer.Peer.Ip}:{peer.Peer.Port}", $"Expecting piece? {peer.AmWaitingForPiece}");
-                    try
+                    var trackerResult = tracker.Track(torrent, TrackerEvent.Started).Result;
+                    foreach (var peer in trackerResult.Peers)
                     {
-                        var neededPiecesIds = neededPieces
-                            .Select(p => p.PieceIndex)
-                            .ToList();
-
-                        var nullablePieceIndex = peer.RetrievePieceIndexIfAny(neededPiecesIds);
-                        if (nullablePieceIndex == null)
-                        {
-                            if (peer.AmInterested)
-                                peer.SendInterest(false);
-
-                            Console.WriteLine();
-                            continue;
-                        }
-
-                        if (!peer.AmInterested || peer.PeerChocking)
-                        {
-                            Console.WriteLine($"Sending interest");
-                            peer.SendInterest(true);
-                            continue;
-                        }
-
-                        if (!peer.PeerChocking && !peer.AmWaitingForPiece)
-                        {
-                            var pieceIndex = nullablePieceIndex.Value;
-                            var neededPiece = neededPieces.Find(p => p.PieceIndex == pieceIndex);
-                            neededPieces.Remove(neededPiece);
-                            neededPiece.Pending = true;
-
-                            var block = neededPiece.GetNextBlock();
-
-                            Console.WriteLine($"Asking for piece: {pieceIndex}");
-                            peer.RequestPiece((uint) pieceIndex, block.Offset, block.Length);
-                            continue;
-                        }
-
-                        //peer.SendKeepAlive();
-                        Console.WriteLine("");
+                        var t = new Thread(() => peerConnector.TryConnectToPeer(peer, OnPeerEvent));
+                        t.Start();
                     }
-                    catch (Exception ex)
+
+                    progress.Report((double) (Pieces.Count - GetNonCompletedPieces().Count) / Pieces.Count);
+
+                    Thread.Sleep(20);
+                    var neededPieces = GetAvailableForDownloadPieces();
+
+                    foreach (var peer in peerConnector.Peers)
                     {
-                        Console.WriteLine($"{ex.Message}");
+                        //Console.Write("{0, -40} {1, -30}", $"Connected to peer: {peer.Peer.Ip}:{peer.Peer.Port}", $"Expecting piece? {peer.AmWaitingForPiece}");
+                        try
+                        {
+                            if (peer.AmWaitingForPiece && (DateTime.Now - peer.RequestPieceTime.Value).TotalSeconds > Constants.PieceTimeout)
+                                FreeUpPiece(peer);
+
+                            var neededPiecesIds = neededPieces
+                                .Select(p => p.PieceIndex)
+                                .ToList();
+
+                            var nullablePieceIndex = peer.RetrievePieceIndexIfAny(neededPiecesIds);
+                            if (nullablePieceIndex == null)
+                            {
+                                if (peer.AmInterested)
+                                    peer.SendInterest(false);
+
+                                //Console.WriteLine();
+                                continue;
+                            }
+
+                            if (!peer.AmInterested || peer.PeerChocking)
+                            {
+                                //Console.WriteLine($"Sending interest");
+                                peer.SendInterest(true);
+                                continue;
+                            }
+
+                            if (!peer.PeerChocking && !peer.AmWaitingForPiece)
+                            {
+                                var pieceIndex = nullablePieceIndex.Value;
+                                var neededPiece = neededPieces.Find(p => p.PieceIndex == pieceIndex);
+                                neededPieces.Remove(neededPiece);
+                                neededPiece.Pending = true;
+
+                                lock (pieceLock)
+                                {
+                                    var block = neededPiece.GetNextBlock();
+                                    //Console.WriteLine($"Asking for piece: {pieceIndex}");
+                                    peer.RequestPiece((uint) pieceIndex, block.Offset, block.Length);
+                                }
+                                continue;
+                            }
+
+                            //peer.SendKeepAlive();
+                            //Console.WriteLine("");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"{ex.Message}");
+                        }
                     }
                 }
             }
@@ -118,8 +129,19 @@ namespace BitTorrentEdu
                 {
                     var bytes = File.ReadAllBytes(piece.GetFullPath());
                     fileStream.Write(bytes, 0, bytes.Length);
+                    File.Delete(piece.GetFullPath());
                 }
             }
+
+            Console.WriteLine("Download done. Cleaning up...");
+            foreach (var peer in peerConnector.Peers)
+            {
+                peerConnector.DisconnectPeer(peer);
+            }
+            Console.WriteLine("Done cleaning up. Press any key to exit...");
+            Console.ReadLine();
+
+            return;
         }
 
         public static List<TorrentPiece> GetAvailableForDownloadPieces()
@@ -147,7 +169,12 @@ namespace BitTorrentEdu
             var eventData = eventArgs.EventData;
             var senderPeer = (SocketPeer)sender;
 
-            Console.WriteLine($"Peer {senderPeer.Peer.Ip}: EVENT {eventData.EventType}");
+            //Console.WriteLine($"Peer {senderPeer.Peer.Ip}: EVENT {eventData.EventType}");
+
+            if (eventData.EventType == PeerEventType.Choke || eventData.EventType == PeerEventType.ConnectionClosed)
+            {
+                FreeUpPiece(senderPeer);
+            }
 
             if (eventData.EventType == PeerEventType.Piece)
             {
@@ -163,10 +190,24 @@ namespace BitTorrentEdu
                     return; //Got sent a piece with index that does not exist. Discarded.
 
                 //TODO: CASTING TO INT HERE IS BAD. FIX.
-                if (!Pieces[(int)pieceIndex].TryAddBlock(blockData, blockOffset))
-                    return; //Add failed. Discarded.
+                lock (pieceLock)
+                {
+                    if (!Pieces[(int)pieceIndex].TryAddBlock(blockData, blockOffset))
+                        return; //Add failed. Discarded.
+                }
+            }
+        }
 
-                //Console.WriteLine($"Event {eventData.EventType}: Peer {senderPeer.Peer.Ip}: GOT PIECE!!!!");
+        public static void FreeUpPiece(SocketPeer peer)
+        {
+            lock (pieceLock)
+            {
+                var pieceIndex = peer.RequestedPiece;
+                if (pieceIndex != null)
+                {
+                    Pieces[(int)pieceIndex].Pending = false;
+                    peer.PieceRequestComplete();
+                }
             }
         }
     }
