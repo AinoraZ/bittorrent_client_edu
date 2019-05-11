@@ -4,14 +4,13 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{35CA8E24-576F-4AFF-B2A1-D1591BA3E521}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <RootNamespace>BitTorrentEdu</RootNamespace>
-    <AssemblyName>BitTorrentEdu</AssemblyName>
+    <ProjectGuid>{59EE0A00-5E5A-4293-8F3E-FC6E1B6AC8C3}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>BitTorrentConsoleApp</RootNamespace>
+    <AssemblyName>BitTorrentConsoleApp</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,9 +31,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -46,42 +42,28 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
-    <Compile Include="DTOs\Peer.cs" />
-    <Compile Include="DTOs\PeerHandshake.cs" />
-    <Compile Include="DTOs\TorrentPiece.cs" />
-    <Compile Include="IPeerConnector.cs" />
-    <Compile Include="IPeerEventDataFactory.cs" />
-    <Compile Include="ITorrentFactory.cs" />
-    <Compile Include="PeerEventDataFactory.cs" />
-    <Compile Include="SocketPeer.cs" />
-    <Compile Include="DTOs\Torrent.cs" />
-    <Compile Include="DTOs\TorrentInfoSingle.cs" />
-    <Compile Include="DTOs\TrackerResponse.cs" />
-    <Compile Include="ITrackerResponseFactory.cs" />
-    <Compile Include="PeerConnector.cs" />
-    <Compile Include="DTOs\PeerEventArgs.cs" />
-    <Compile Include="BitTorrentDownloader.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TorrentFactory.cs" />
-    <Compile Include="Tracker.cs" />
-    <Compile Include="TrackerResponseFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BitTorrentEdu\Bencode\Bencode.csproj">
+      <Project>{2DBE606B-B0E1-4BBE-BCE6-FE0C9382462C}</Project>
+      <Name>Bencode</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BitTorrentEdu\BitTorrentEdu.csproj">
+      <Project>{35CA8E24-576F-4AFF-B2A1-D1591BA3E521}</Project>
+      <Name>BitTorrentEdu</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Sockets\Sockets.csproj">
       <Project>{9D4D2C77-936C-41F5-94AF-A790E19A3A35}</Project>
       <Name>Sockets</Name>
     </ProjectReference>
     <ProjectReference Include="..\Utils\Utils.csproj">
-      <Project>{4A4ED196-E61A-4541-A00C-2BB3D99905D9}</Project>
+      <Project>{4a4ed196-e61a-4541-a00c-2bb3d99905d9}</Project>
       <Name>Utils</Name>
-    </ProjectReference>
-    <ProjectReference Include="Bencode\Bencode.csproj">
-      <Project>{2DBE606B-B0E1-4BBE-BCE6-FE0C9382462C}</Project>
-      <Name>Bencode</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

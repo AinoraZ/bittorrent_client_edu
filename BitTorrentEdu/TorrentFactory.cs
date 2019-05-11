@@ -9,7 +9,7 @@ using System.Text;
 
 namespace BitTorrentEdu
 {
-    public class TorrentFactory
+    public class TorrentFactory : ITorrentFactory
     {
         private IBencodeParser BencodeParser { get; set; }
 

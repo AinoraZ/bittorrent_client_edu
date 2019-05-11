@@ -7,7 +7,6 @@ namespace BitTorrentEdu.DTOs
     public class TorrentPiece
     {
         public bool Complete { get; private set; } = false;
-        public bool Pending { get; set; } = false;
         public long PieceIndex { get; }
         public long PieceLength { get; }
         public string SaveDirectory { get; }
@@ -23,7 +22,6 @@ namespace BitTorrentEdu.DTOs
 
         public bool TryAddBlock(byte[] block, uint offset)
         {
-            Pending = false;
             if (offset != PieceData.Count)
                 return false;
 
@@ -65,11 +63,6 @@ namespace BitTorrentEdu.DTOs
             var length = (uint) Math.Min(Constants.DefaultPieceSize, PieceLength - PieceData.Count);
 
             return new Block(offset, length);
-        }
-
-        public bool IsCompletedOrPending()
-        {
-            return Complete || Pending;
         }
     }
 

@@ -24,8 +24,7 @@ namespace BitTorrentEdu
             }
         }
 
-        public string PeerId { get; }
-
+        private string PeerId { get; }
         private TorrentInfoSingle TorrentInfo { get; set; }
         private ITcpSocketHelper TcpSocketHelper { get; }
         private List<Peer> PendingPeers { get; set; } = new List<Peer>();
@@ -75,11 +74,8 @@ namespace BitTorrentEdu
             var socketPeer = new SocketPeer(PeerEventDataFactory, peer, socket, TorrentInfo, PeerId);
             if (!socketPeer.TryInitiateHandsake())
             {
-                lock (peerLock)
-                {
-                    PendingPeers.Remove(peer);
-                }
-                socketPeer.Dispose();
+                PendingPeers.Remove(peer);
+                DisconnectPeer(socketPeer);
                 return false;
             }
 
@@ -100,28 +96,22 @@ namespace BitTorrentEdu
         {
             lock (peerLock)
             {
-                if (!_peers.Contains(peer))
-                    return;
+                if (_peers.Contains(peer))
+                    _peers.Remove(peer);
 
                 peer.Dispose();
-                _peers.Remove(peer);
             }
         }
 
-        public void OnPeerEvent(object sender, PeerEventArgs eventArgs)
+        private void OnPeerEvent(object sender, PeerEventArgs eventArgs)
         {
             var eventData = eventArgs.EventData;
             var senderPeer = (SocketPeer) sender;
-            lock (peerLock)
-            {
-                if (!Peers.Contains(senderPeer))
-                    return;
-            }
+            if (!Peers.Contains(senderPeer))
+                return;
 
             if (eventData.EventType == PeerEventType.ConnectionClosed)
-            {
                 DisconnectPeer(senderPeer);
-            }
         }
     }
 }

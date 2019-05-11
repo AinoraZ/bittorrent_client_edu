@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using BitTorrentEdu.DTOs;
-using Sockets;
 
 namespace BitTorrentEdu
 {
@@ -9,6 +8,7 @@ namespace BitTorrentEdu
     {
         List<SocketPeer> Peers { get; }
 
+        void DisconnectPeer(SocketPeer peer);
         bool IsPeerConnected(Peer peer);
         bool TryConnectToPeer(Peer peer, EventHandler<PeerEventArgs> eventHandler = null);
     }

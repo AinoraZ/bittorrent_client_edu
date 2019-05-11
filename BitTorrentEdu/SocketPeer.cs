@@ -21,12 +21,11 @@ namespace BitTorrentEdu
         private List<long> PieceIndexes { get; } = new List<long>();
         public bool AmInterested { get; private set; } = false;
         public bool PeerChocking { get; private set; } = true;
-        public long? RequestedPiece { get; private set; } = null;
         public DateTime? RequestPieceTime { get; private set; } = null;
         public bool AmWaitingForPiece {
             get 
             {
-                return RequestedPiece != null;
+                return RequestPieceTime != null;
             }
         }
 
@@ -83,11 +82,12 @@ namespace BitTorrentEdu
             {
                 Socket.Send(peerHandshake.ToHandshakeBytes());
                 byte[] response = new byte[Constants.MaxMessageSize];
-                var bytesRead = Socket.Receive(response);
+                var bytesReceived = Socket.Receive(response);
 
-                //Handle disconnect on handshake receive
+                if(bytesReceived == 0)
+                    return false;
 
-                var handshakeContent = new PeerHandshake(response.Take(bytesRead).ToArray());
+                var handshakeContent = new PeerHandshake(response.Take(bytesReceived).ToArray());
 
                 if (!InfoHash.SequenceEqual(handshakeContent.InfoHash))
                     return false;
@@ -95,7 +95,7 @@ namespace BitTorrentEdu
                 var totalHandshakeBytes = handshakeContent.Length + handshakeContent.Reserved.Length + 1 +
                     handshakeContent.InfoHash.Length + handshakeContent.PeerId.Length;
 
-                var leftovers = response.Skip(totalHandshakeBytes).Take(bytesRead - totalHandshakeBytes);
+                var leftovers = response.Skip(totalHandshakeBytes).Take(bytesReceived - totalHandshakeBytes);
                 TemporaryReceiveBuffer.AddRange(leftovers);
 
                 return true;
@@ -121,7 +121,7 @@ namespace BitTorrentEdu
             ReceiveThread = null;
         }
 
-        public void ReadLoop()
+        private void ReadLoop()
         {
             while (ThreadRunning)
             {
@@ -142,6 +142,12 @@ namespace BitTorrentEdu
                 byte[] response = new byte[Constants.MaxMessageSize];
                 var bytesReceived = Socket.Receive(response);
 
+                if (bytesReceived == 0)
+                {
+                    HandleDisconnect("0 bytes read. Disconnected");
+                    return;
+                }
+
                 var trimmedResponse = response.Take(bytesReceived);
                 TemporaryReceiveBuffer.AddRange(trimmedResponse);
 
@@ -158,13 +164,18 @@ namespace BitTorrentEdu
             }
             catch (Exception ex)
             {
-                var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, 0, null, ex.Message);
-                var eventArgs = new PeerEventArgs(peerEventData);
-                PeerEventHandler(this, eventArgs);
+                HandleDisconnect(ex.Message);
             }
         }
 
-        public void HandlePeerEvent (PeerEventData peerEventData)
+        private void HandleDisconnect(string exceptionMessage = null)
+        {
+            var peerEventData = new PeerEventData(PeerEventStatus.Error, PeerEventType.ConnectionClosed, 0, null, exceptionMessage);
+            var eventArgs = new PeerEventArgs(peerEventData);
+            PeerEventHandler(this, eventArgs);
+        }
+
+        private void HandlePeerEvent (PeerEventData peerEventData)
         {
             if (peerEventData.EventStatus == PeerEventStatus.Partial)
                 return;
@@ -175,24 +186,30 @@ namespace BitTorrentEdu
                 PeerChocking = false;
             if (peerEventData.EventType == PeerEventType.Piece)
                 PieceRequestComplete();
-            if (peerEventData.EventType == PeerEventType.Bitfield)
-                ParseBitfield(peerEventData);
+            if (peerEventData.EventType == PeerEventType.Bitfield && !ParseBitfield(peerEventData))
+            {
+                HandleDisconnect("Invalid bitfield sent");
+                return;
+            }
 
             var eventArgs = new PeerEventArgs(peerEventData);
             PeerEventHandler(this, eventArgs);
         }
 
-        public void ParseBitfield(PeerEventData peerEventData)
+        private bool ParseBitfield(PeerEventData peerEventData)
         {
             var byteBitsList = peerEventData.Payload.Select(b => new BitArray(new byte[] { b }));
+
+            if (byteBitsList.Count() * 8 < PieceAmount - 1)
+                return false;
 
             long pieceIndex = 0;
             foreach (var byteBits in byteBitsList)
             {
                 for (int byteIndex = 7; byteIndex >= 0; byteIndex--)
                 {
-                    if (pieceIndex >= PieceAmount)
-                        break;
+                    if (pieceIndex >= PieceAmount && byteBits[byteIndex]) //Extra bits must be 0
+                        return false;
 
                     if (byteBits[byteIndex])
                         PieceIndexes.Add(pieceIndex);
@@ -201,10 +218,12 @@ namespace BitTorrentEdu
                 }
             }
 
-            if (pieceIndex < PieceAmount - 1)
-            {
-                //Bad bitfield
-            }
+            return true;
+        }
+
+        private void ParseHave(PeerEventData peerEventData)
+        {
+
         }
 
         public void SendKeepAlive()
@@ -222,7 +241,6 @@ namespace BitTorrentEdu
 
         public void RequestPiece(uint pieceIndex, uint blockBeginIndex, uint blockLength)
         {
-            RequestedPiece = pieceIndex;
             RequestPieceTime = DateTime.Now;
             var sendContent = new List<byte> { 0, 0, 0, 0x0d, 6 };
 
@@ -235,7 +253,6 @@ namespace BitTorrentEdu
 
         public void PieceRequestComplete()
         {
-            RequestedPiece = null;
             RequestPieceTime = null;
         }
 
