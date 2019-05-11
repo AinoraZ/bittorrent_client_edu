@@ -61,14 +61,14 @@ namespace BitTorrentEdu
 
         public long? RetrievePieceIndexIfAny(List<long> neededPieces)
         {
-            if (neededPieces.Count == 0)
+            if (!neededPieces.Any())
                 return null;
 
-            if (PieceIndexes.Count == 0)
+            if (!PieceIndexes.Any())
                 return null;
 
             var intersection = PieceIndexes.Intersect(neededPieces).ToList();
-            if (intersection.Count == 0)
+            if (!intersection.Any())
                 return null;
 
             return intersection.First();

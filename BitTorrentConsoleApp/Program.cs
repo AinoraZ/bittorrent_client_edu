@@ -62,6 +62,7 @@ namespace BitTorrentConsoleApp
             {
                 while (!torrentClient.IsDownloadCompleted)
                 {
+                    Thread.Sleep(Constants.UpdateClockMs);
                     var pieces = torrentClient.Pieces;
                     if (pieces.Count == 0)
                         continue;
@@ -74,8 +75,8 @@ namespace BitTorrentConsoleApp
             }
 
             Console.WriteLine("Done downloading file");
-            Console.WriteLine("Press any key to continue");
-            Console.ReadKey();
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadLine();
         }
 
         private static void OnPeerEvent(object sender, PeerEventArgs peerEventArgs)

@@ -77,7 +77,7 @@ namespace BitTorrentEdu
                             pieceLength = tempPieceLength;
                     }
 
-                    var piece = new TorrentPiece(pieceIndex, pieceLength, fullSaveDir);
+                    var piece = new TorrentPiece(pieceIndex, pieceLength, fullSaveDir, torrent.Info.PieceHashes[pieceIndex]);
                     _pieces.Add(piece);
                 }
             }
@@ -89,20 +89,11 @@ namespace BitTorrentEdu
             {
                 try
                 {
-                    if (peerConnector.Peers.Count < 25)
-                    {
-                        var trackerResult = tracker.Track(torrent, TrackerEvent.Started).Result;
-                        foreach (var peer in trackerResult.Peers)
-                        {
-                            var t = new Thread(() => peerConnector.TryConnectToPeer(peer, OnPeerEvent));
-                            t.Start();
-                        }
-                    }
+                    ConnectNewPeersIfNeeded(peerConnector, tracker, torrent);
 
                     var neededPieces = GetAvailableForDownloadPieces();
                     foreach (var peer in peerConnector.Peers)
                     {
-                        //Console.Write("{0, -40} {1, -30}", $"Connected to peer: {peer.Peer.Ip}:{peer.Peer.Port}", $"Expecting piece? {peer.AmWaitingForPiece}");
                         var neededPiecesIds = neededPieces
                             .Select(p => p.PieceIndex)
                             .ToList();
@@ -116,7 +107,7 @@ namespace BitTorrentEdu
                             continue;
                         }
 
-                        if (!peer.AmInterested || peer.PeerChocking)
+                        if (!peer.AmInterested)
                         {
                             peer.SendInterest(true);
                             continue;
@@ -138,15 +129,13 @@ namespace BitTorrentEdu
                         }
 
                         //peer.SendKeepAlive();
-                        //Console.WriteLine("");
                     }
 
                     FreeBlockedPieces(peerConnector);
                 }
+                //TODO: Bad practice
                 catch (Exception ex)
-                {
-                    //Console.WriteLine($"{ex.Message}");
-                }
+                { }
             }
 
             var fullFilePath = Path.Combine(fullSaveDir, torrent.Info.Name);
@@ -155,6 +144,19 @@ namespace BitTorrentEdu
             CleanupResources(peerConnector);
 
             IsDownloadCompleted = true;
+        }
+
+        private void ConnectNewPeersIfNeeded(IPeerConnector peerConnector, ITracker tracker, Torrent torrent)
+        {
+            if (peerConnector.Peers.Count < 25)
+            {
+                var trackerResult = tracker.Track(torrent, TrackerEvent.Started).Result;
+                foreach (var peer in trackerResult.Peers)
+                {
+                    var t = new Thread(() => peerConnector.TryConnectToPeer(peer, OnPeerEvent));
+                    t.Start();
+                }
+            }
         }
 
         private void FreeBlockedPieces(IPeerConnector peerConnector)

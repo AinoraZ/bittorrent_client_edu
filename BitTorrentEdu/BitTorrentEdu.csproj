@@ -53,6 +53,7 @@
     <Compile Include="IPeerConnector.cs" />
     <Compile Include="IPeerEventDataFactory.cs" />
     <Compile Include="ITorrentFactory.cs" />
+    <Compile Include="ITracker.cs" />
     <Compile Include="PeerEventDataFactory.cs" />
     <Compile Include="SocketPeer.cs" />
     <Compile Include="DTOs\Torrent.cs" />

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BitTorrentEdu
 {
-    public class Tracker
+    public class Tracker : ITracker
     {
         private IBencodeParser BencodeParser { get; set; }
         private IHttpClientHelper HttpClient { get; set; }
