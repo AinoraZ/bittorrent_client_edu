@@ -41,6 +41,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BencodeParsers\BencodeParserBase.cs" />
+    <Compile Include="BencodeParserFactory.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="BencodeParsers\DictionaryBencodeParser.cs" />
     <Compile Include="DTOs\BencodedDictionary.cs" />
     <Compile Include="DTOs\BencodedList.cs" />
     <Compile Include="DTOs\BencodedObject.cs" />
@@ -48,7 +52,11 @@
     <Compile Include="DTOs\BencodedInteger.cs" />
     <Compile Include="BencodeParser.cs" />
     <Compile Include="IBencodeParser.cs" />
+    <Compile Include="IBencodeParserFactory.cs" />
+    <Compile Include="BencodeParsers\IntegerBencodeParser.cs" />
+    <Compile Include="BencodeParsers\ListBencodeParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="BencodeParsers\StringBencodeParser.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
