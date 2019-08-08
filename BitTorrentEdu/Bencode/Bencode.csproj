@@ -43,7 +43,7 @@
   <ItemGroup>
     <Compile Include="BencodeParsers\BencodeParserBase.cs" />
     <Compile Include="BencodeParserFactory.cs" />
-    <Compile Include="Constants.cs" />
+    <Compile Include="BencodeConstants.cs" />
     <Compile Include="BencodeParsers\DictionaryBencodeParser.cs" />
     <Compile Include="DTOs\BencodedDictionary.cs" />
     <Compile Include="DTOs\BencodedList.cs" />

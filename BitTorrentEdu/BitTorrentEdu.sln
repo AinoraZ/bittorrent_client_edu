@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28010.2016
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29123.88
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentEdu", "BitTorrentEdu.csproj", "{35CA8E24-576F-4AFF-B2A1-D1591BA3E521}"
 EndProject
@@ -12,6 +12,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "..\Utils\Utils.csproj", "{4A4ED196-E61A-4541-A00C-2BB3D99905D9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitTorrentConsoleApp", "..\BitTorrentConsoleApp\BitTorrentConsoleApp.csproj", "{59EE0A00-5E5A-4293-8F3E-FC6E1B6AC8C3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{5C7A51FB-A7C9-4411-86E2-2D30C2F4BCCC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bencode.UnitTests", "..\Bencode.UnitTests\Bencode.UnitTests.csproj", "{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -127,9 +131,32 @@ Global
 		{59EE0A00-5E5A-4293-8F3E-FC6E1B6AC8C3}.Release|x64.Build.0 = Release|Any CPU
 		{59EE0A00-5E5A-4293-8F3E-FC6E1B6AC8C3}.Release|x86.ActiveCfg = Release|Any CPU
 		{59EE0A00-5E5A-4293-8F3E-FC6E1B6AC8C3}.Release|x86.Build.0 = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|ARM.Build.0 = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|x64.Build.0 = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Debug|x86.Build.0 = Debug|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|ARM.ActiveCfg = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|ARM.Build.0 = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|ARM64.Build.0 = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|x64.ActiveCfg = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|x64.Build.0 = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|x86.ActiveCfg = Release|Any CPU
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{97D940F8-9D24-41D6-B7AA-D3C5395F32A5} = {5C7A51FB-A7C9-4411-86E2-2D30C2F4BCCC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BB095F12-B967-4518-B438-B96479273608}

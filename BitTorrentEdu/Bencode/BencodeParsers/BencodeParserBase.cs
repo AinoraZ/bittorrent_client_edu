@@ -9,7 +9,7 @@ namespace Bencode.BencodeParsers
 {
     public abstract class BencodeParserBase
     {
-        internal abstract BencodedObject Parse(ref byte[] bytes, ref int byteOffset);
+        public abstract BencodedObject Parse(ref byte[] bytes, ref int byteOffset);
 
         public static char ByteToChar(byte value)
         {
@@ -36,7 +36,6 @@ namespace Bencode.BencodeParsers
 
             var tempString = new string(tempChars.ToArray());
             return long.Parse(tempString);
-
         }
     }
 }

@@ -12,7 +12,7 @@ namespace Bencode.BencodeParsers
             ParserFactory = parserFactory;
         }
 
-        internal override BencodedObject Parse(ref byte[] bytes, ref int byteOffset)
+        public override BencodedObject Parse(ref byte[] bytes, ref int byteOffset)
         {
             string rawValue = BencodeConstants.DictionaryInitial.ToString();
             var tempValue = new Dictionary<string, BencodedObject>();

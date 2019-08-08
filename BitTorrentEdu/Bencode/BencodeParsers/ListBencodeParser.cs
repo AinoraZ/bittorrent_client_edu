@@ -3,7 +3,7 @@ using Bencode.DTOs;
 
 namespace Bencode.BencodeParsers
 {
-    internal class ListBencodeParser : BencodeParserBase
+    public class ListBencodeParser : BencodeParserBase
     {
         private IBencodeParserFactory ParserFactory { get; set; }
 
@@ -12,7 +12,7 @@ namespace Bencode.BencodeParsers
             ParserFactory = parserFactory;
         }
 
-        internal override BencodedObject Parse(ref byte[] bytes, ref int byteOffset)
+        public override BencodedObject Parse(ref byte[] bytes, ref int byteOffset)
         {
             string rawValue = BencodeConstants.ListInitial.ToString();
             var tempValue = new List<BencodedObject>();
